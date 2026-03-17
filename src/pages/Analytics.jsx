@@ -14,9 +14,10 @@ import clsx from 'clsx'
 const CURRENT_YEAR = getYear(new Date())
 
 // ── Heatmap ──────────────────────────────────────────────────────────────────
-// Sur mobile : scroll horizontal dans un conteneur dédié
 
-function Heatmap({ entries, year }) {
+function Heatmap({ entries, year, currency = '€' }) {
+  const [active, setActive] = useState(null)
+
   const weeks = eachWeekOfInterval(
     { start: startOfYear(new Date(year, 0, 1)), end: endOfYear(new Date(year, 0, 1)) },
     { weekStartsOn: 1 }
@@ -57,9 +58,29 @@ function Heatmap({ entries, year }) {
     return positions
   }, [weeks])
 
+  const fmtVal = (val) => val === undefined
+    ? '—'
+    : `${val >= 0 ? '+' : ''}${val.toFixed(0)} ${currency}`
+
   return (
     <div>
-      {/* Scroll horizontal sur mobile, plein sur desktop */}
+      {/* Barre d'info — hover desktop / tap mobile */}
+      <div className={clsx(
+        'mb-3 px-3 py-2 rounded-xl text-xs font-mono transition-all min-h-[32px] flex items-center',
+        active
+          ? active.val === undefined
+            ? 'bg-surface-muted text-zinc-500'
+            : active.val >= 0
+              ? 'bg-brand-500/10 border border-brand-500/20 text-brand-400'
+              : 'bg-red-500/10 border border-red-500/20 text-red-400'
+          : 'bg-surface-muted/50 text-zinc-600'
+      )}>
+        {active
+          ? `Sem. ${active.i + 1} · ${format(active.week, 'dd MMM', { locale: fr })} : ${fmtVal(active.val)}`
+          : 'Passe sur une semaine pour voir le détail'
+        }
+      </div>
+
       <div className="overflow-x-auto -mx-1 px-1 pb-2">
         <div style={{ minWidth: '520px' }}>
           {/* Labels mois */}
@@ -79,17 +100,25 @@ function Heatmap({ entries, year }) {
             {weeks.map((w, i) => {
               const key = `${getYear(w)}-W${String(getWeek(w, { weekStartsOn: 1 })).padStart(2, '0')}`
               const val = byWeek[key]
+              const isActive = active?.i === i
               return (
                 <div
                   key={i}
-                  title={val !== undefined ? `Sem. ${i + 1}: ${val >= 0 ? '+' : ''}${val?.toFixed(0)}` : `Sem. ${i + 1}: —`}
-                  className={clsx('w-3.5 h-3.5 rounded-sm shrink-0 transition-all cursor-default', getColor(val))}
+                  onMouseEnter={() => setActive({ i, val, week: w })}
+                  onMouseLeave={() => setActive(null)}
+                  onClick={() => setActive(active?.i === i ? null : { i, val, week: w })}
+                  className={clsx(
+                    'w-3.5 h-3.5 rounded-sm shrink-0 transition-all cursor-pointer',
+                    getColor(val),
+                    isActive && 'ring-1 ring-white/40 scale-125'
+                  )}
                 />
               )
             })}
           </div>
         </div>
       </div>
+
       {/* Légende */}
       <div className="flex items-center gap-2 mt-3 text-[10px] text-zinc-600 flex-wrap">
         <span>Moins</span>
@@ -363,7 +392,7 @@ export default function Analytics() {
           <h2 className="text-sm font-semibold text-zinc-400 mb-4">Heatmap {heatmapYear}</h2>
           {loading
             ? <div className="h-12 bg-surface-muted rounded-xl animate-pulse" />
-            : <Heatmap entries={entries.filter(e => e.status !== 'pending')} year={heatmapYear} />
+            : <Heatmap entries={entries.filter(e => e.status !== 'pending')} year={heatmapYear} currency={currency} />
           }
         </div>
 
