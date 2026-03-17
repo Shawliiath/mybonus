@@ -100,7 +100,7 @@ export default function Entries() {
               {filteredEntries.length} entrée{filteredEntries.length !== 1 ? 's' : ''} · {filteredExpenses.length} sortie{filteredExpenses.length !== 1 ? 's' : ''}
             </p>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5 flex-wrap justify-end">
             <button onClick={() => { setEditExpense(null); setExpenseModal(true) }}
               className="flex items-center gap-2 bg-red-500/10 hover:bg-red-500/20 border border-red-500/20 text-red-400 font-semibold rounded-xl px-4 py-2 text-sm transition-all">
               <ArrowUpCircle size={16} />Sortie

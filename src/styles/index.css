@@ -4,7 +4,33 @@
 
 @layer base {
   * { box-sizing: border-box; }
-  html { -webkit-font-smoothing: antialiased; }
+
+  html {
+    -webkit-font-smoothing: antialiased;
+    /* Empêche le zoom auto sur les inputs iOS */
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+    overflow-x: hidden;
+  }
+
+  body {
+    background-color: var(--bg);
+    color: var(--text);
+    /* Bloque le scroll horizontal sur toute l'app */
+    overflow-x: hidden;
+    width: 100%;
+    max-width: 100vw;
+  }
+
+  #root {
+    overflow-x: hidden;
+    width: 100%;
+  }
+
+  /* Empêche les inputs de déclencher le zoom sur iOS (min 16px) */
+  input, select, textarea {
+    font-size: 16px !important;
+  }
 
   /* ── Dark mode (default) ── */
   :root {
@@ -24,11 +50,6 @@
     --border:     #e2e6f0;
     --text:       #0f1117;
     --text-muted: #6b7280;
-  }
-
-  body {
-    background-color: var(--bg);
-    color: var(--text);
   }
 
   ::-webkit-scrollbar { width: 6px; height: 6px; }

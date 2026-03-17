@@ -122,7 +122,7 @@ export default function AppLayout({ children }) {
         </div>
       )}
 
-      <main className="flex-1 lg:ml-60 pt-14 lg:pt-0 min-h-screen">{children}</main>
+      <main className="flex-1 lg:ml-60 pt-14 lg:pt-0 min-h-screen overflow-x-hidden w-full">{children}</main>
     </div>
   )
 }

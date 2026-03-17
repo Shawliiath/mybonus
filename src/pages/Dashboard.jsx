@@ -127,50 +127,52 @@ export default function Dashboard() {
     <AppLayout>
       <div className="px-4 sm:px-6 py-6 sm:py-8 max-w-7xl mx-auto space-y-5 sm:space-y-6 animate-fade-in">
 
-        {/* Header épuré */}
-        <div className="flex items-center justify-between gap-2 flex-wrap">
-          <div>
-            <h1 className="text-xl sm:text-2xl font-bold text-zinc-900 dark:text-white">Dashboard</h1>
-            <p className="text-zinc-500 text-sm mt-0.5">
-              {entries.length} semaine{entries.length !== 1 ? 's' : ''}
-              {expenses.length > 0 && ` · ${expenses.length} sortie${expenses.length !== 1 ? 's' : ''}`}
-              {' · '}<span className="text-zinc-400">{yearFilter === 'alltime' ? 'Alltime' : yearFilter}</span>
-            </p>
+        {/* Header — ligne 1 : titre + actions principales */}
+        <div className="space-y-3">
+          <div className="flex items-center justify-between gap-2">
+            <div>
+              <h1 className="text-xl sm:text-2xl font-bold text-zinc-900 dark:text-white">Dashboard</h1>
+              <p className="text-zinc-500 text-sm mt-0.5">
+                {entries.length} semaine{entries.length !== 1 ? 's' : ''}
+                {expenses.length > 0 && ` · ${expenses.length} sortie${expenses.length !== 1 ? 's' : ''}`}
+                {' · '}<span className="text-zinc-400">{yearFilter === 'alltime' ? 'Alltime' : yearFilter}</span>
+              </p>
+            </div>
+            {/* Boutons principaux — toujours visibles */}
+            <div className="flex items-center gap-2 shrink-0">
+              <button onClick={() => { setEditExpense(null); setExpenseModal(true) }}
+                className="flex items-center gap-1.5 bg-red-500/10 hover:bg-red-500/20 border border-red-500/20 text-red-400 font-semibold rounded-xl px-3 py-2 text-sm transition-all">
+                <ArrowUpCircle size={15} />Sortie
+              </button>
+              <button onClick={() => { setEditEntry(null); setEntryModal(true) }}
+                className="flex items-center gap-1.5 bg-brand-500 hover:bg-brand-400 text-white font-semibold rounded-xl px-3 py-2 text-sm transition-all shadow-lg shadow-brand-500/25">
+                <PlusCircle size={15} />Ajouter
+              </button>
+            </div>
           </div>
 
+          {/* Ligne 2 : filtres */}
           <div className="flex items-center gap-2 flex-wrap">
             <div className="flex rounded-xl bg-surface-muted border border-surface-border overflow-hidden text-xs">
               {CURRENCIES.map(c => (
                 <button key={c} onClick={() => setViewCurrency(c === storedCurrency ? null : c)}
-                  className={clsx('px-2.5 py-1.5 transition-all font-mono',
+                  className={clsx('px-2 py-1.5 transition-all font-mono',
                     (viewCurrency || storedCurrency) === c ? 'bg-brand-500/20 text-brand-400' : 'text-zinc-500 hover:text-zinc-300')}>
                   {c}
                 </button>
               ))}
             </div>
-
             <select value={yearFilter}
               onChange={e => setYearFilter(e.target.value === 'alltime' ? 'alltime' : Number(e.target.value))}
               className="bg-surface-muted border border-surface-border rounded-xl px-3 py-1.5 text-sm text-zinc-900 dark:text-white focus:outline-none focus:border-brand-500/60 transition-all">
               {YEARS.map(y => <option key={y} value={y}>{y === 'alltime' ? 'Alltime' : y}</option>)}
             </select>
-
             {(entries.length > 0 || expenses.length > 0) && (
               <button onClick={() => exportCSV(entries, expenses, storedCurrency)}
                 className="flex items-center gap-1.5 bg-surface-muted hover:bg-zinc-700 border border-surface-border rounded-xl px-3 py-1.5 text-sm transition-all text-zinc-400 hover:text-white">
                 <Download size={14} />CSV
               </button>
             )}
-
-            <button onClick={() => { setEditExpense(null); setExpenseModal(true) }}
-              className="flex items-center gap-1.5 bg-red-500/10 hover:bg-red-500/20 border border-red-500/20 text-red-400 font-semibold rounded-xl px-3 py-1.5 text-sm transition-all">
-              <ArrowUpCircle size={15} />Sortie
-            </button>
-
-            <button onClick={() => { setEditEntry(null); setEntryModal(true) }}
-              className="flex items-center gap-1.5 bg-brand-500 hover:bg-brand-400 text-white font-semibold rounded-xl px-3 py-1.5 text-sm transition-all shadow-lg shadow-brand-500/25">
-              <PlusCircle size={15} />Ajouter
-            </button>
           </div>
         </div>
 
