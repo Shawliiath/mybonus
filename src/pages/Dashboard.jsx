@@ -310,6 +310,8 @@ export default function Dashboard() {
             entries={convertedEntries}
             onEdit={e => { setEditEntry(e); setEntryModal(true) }}
             onDelete={e => { setDeleteTarget(e); setDeleteType('entry') }}
+            onConfirm={e => updateEntry(e.id, { status: 'confirmed' })}
+            onCancel={e => { setDeleteTarget(e); setDeleteType('entry') }}
             currency={displayCurrency}
             loading={loadingEntries}
           />

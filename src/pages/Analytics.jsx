@@ -282,14 +282,16 @@ export default function Analytics() {
   const loading = loadE || loadX
 
   const yearEntries = useMemo(() => {
-    if (year === 'alltime') return entries
-    return entries.filter(e => e.weekStart && getYear(new Date(e.weekStart)) === year)
+    const confirmed = entries.filter(e => e.status !== 'pending')
+    if (year === 'alltime') return confirmed
+    return confirmed.filter(e => e.weekStart && getYear(new Date(e.weekStart)) === year)
   }, [entries, year])
 
   const stats = useMemo(() => computeStats(yearEntries, []), [yearEntries])
 
   const streak = useMemo(() => {
-    const sorted = [...entries].sort((a, b) => b.weekStart?.localeCompare(a.weekStart))
+    const confirmed = entries.filter(e => e.status !== 'pending')
+    const sorted = [...confirmed].sort((a, b) => b.weekStart?.localeCompare(a.weekStart))
     let count = 0
     for (const e of sorted) { if ((e.profit || 0) >= 0) count++; else break }
     return count
@@ -352,7 +354,7 @@ export default function Analytics() {
           </h2>
           {loading
             ? <div className="h-48 bg-surface-muted rounded-xl animate-pulse" />
-            : <BankrollChart entries={entries} baseAmount={baseAmount} currency={currency} />
+            : <BankrollChart entries={entries.filter(e => e.status !== 'pending')} baseAmount={baseAmount} currency={currency} />
           }
         </div>
 
@@ -361,7 +363,7 @@ export default function Analytics() {
           <h2 className="text-sm font-semibold text-zinc-400 mb-4">Heatmap {heatmapYear}</h2>
           {loading
             ? <div className="h-12 bg-surface-muted rounded-xl animate-pulse" />
-            : <Heatmap entries={entries} year={heatmapYear} />
+            : <Heatmap entries={entries.filter(e => e.status !== 'pending')} year={heatmapYear} />
           }
         </div>
 
