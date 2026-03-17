@@ -252,7 +252,7 @@ export default function Dashboard() {
               <div className="bg-surface-card border border-brand-500/20 rounded-2xl p-5">
                 <div className="flex items-center gap-2 mb-3">
                   <Star size={15} className="text-amber-400" />
-                  <span className="text-xs font-medium text-zinc-400 uppercase tracking-wider">Meilleure semaine</span>
+                  <span className="text-xs font-medium text-zinc-400 uppercase tracking-wider">Meilleure entrée</span>
                 </div>
                 {stats.bestWeek ? (
                   <div className="flex items-end justify-between">
@@ -274,7 +274,7 @@ export default function Dashboard() {
               <div className="bg-surface-card border border-red-500/20 rounded-2xl p-5">
                 <div className="flex items-center gap-2 mb-3">
                   <TrendingDown size={15} className="text-red-400" />
-                  <span className="text-xs font-medium text-zinc-400 uppercase tracking-wider">Pire semaine</span>
+                  <span className="text-xs font-medium text-zinc-400 uppercase tracking-wider">Pire entrée</span>
                 </div>
                 {stats.worstWeek && stats.worstWeek.id !== stats.bestWeek?.id ? (
                   <div className="flex items-end justify-between">

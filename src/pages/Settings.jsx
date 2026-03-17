@@ -122,7 +122,7 @@ export default function Settings() {
               onChange={e => setMonthlyGoal(e.target.value)}
               className={inputClass} placeholder="500.00" />
           </div>
-          <p className="text-xs text-zinc-600 mt-2">🎯 Laisse vide pour désactiver.</p>
+          <p className="text-xs text-zinc-600 mt-2">Laisse vide pour désactiver.</p>
         </Section>
 
         {/* Devise */}

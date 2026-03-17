@@ -352,7 +352,7 @@ export default function Analytics() {
               <Flame size={17} className="text-amber-400" />
             </div>
             <div>
-              <p className="text-base sm:text-lg font-bold text-white font-mono">{streak} semaine{streak > 1 ? 's' : ''} 🔥</p>
+              <p className="text-base sm:text-lg font-bold text-white font-mono">{streak} semaine{streak > 1 ? 's' : ''} </p>
               <p className="text-xs text-zinc-500">Streak positif en cours</p>
             </div>
           </div>
