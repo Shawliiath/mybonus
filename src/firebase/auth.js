@@ -4,6 +4,8 @@ import {
   signInWithPopup,
   signOut,
   updateProfile,
+  OAuthProvider,
+  getAdditionalUserInfo,
 } from 'firebase/auth'
 import { doc, setDoc, getDoc, serverTimestamp } from 'firebase/firestore'
 import { auth, db, googleProvider } from './config'
@@ -21,9 +23,32 @@ export async function loginWithEmail(email, password) {
 }
 
 export async function loginWithGoogle() {
-  const credential = await signInWithPopup(auth, googleProvider)
-  await createUserDocument(credential.user)
-  return credential.user
+  const result = await signInWithPopup(auth, googleProvider)
+  await createUserDocument(result.user)
+  return result.user
+}
+
+export async function loginWithApple() {
+  const provider = new OAuthProvider('apple.com')
+  provider.addScope('email')
+  provider.addScope('name')
+
+  const result    = await signInWithPopup(auth, provider)
+  const user      = result.user
+  const info      = getAdditionalUserInfo(result)
+
+  // Apple envoie le profil seulement à la toute première connexion
+  const profile      = info?.profile || {}
+  const firstName    = profile.given_name  || profile.firstName  || ''
+  const lastName     = profile.family_name || profile.lastName   || ''
+  const appleDisplayName = [firstName, lastName].filter(Boolean).join(' ').trim()
+
+  if (appleDisplayName && !user.displayName) {
+    await updateProfile(user, { displayName: appleDisplayName })
+  }
+
+  await createUserDocument(user, { displayName: appleDisplayName || user.displayName })
+  return user
 }
 
 export async function logout() {
@@ -34,15 +59,17 @@ async function createUserDocument(user, extraData = {}) {
   const ref  = doc(db, 'users', user.uid)
   const snap = await getDoc(ref)
   if (!snap.exists()) {
+    const email       = user.email || extraData.email || ''
+    const displayName = user.displayName || extraData.displayName || email.split('@')[0] || 'Utilisateur'
     await setDoc(ref, {
       uid:         user.uid,
-      email:       user.email,
-      displayName: user.displayName || extraData.displayName || '',
+      email,
+      displayName,
       photoURL:    user.photoURL || null,
       createdAt:   serverTimestamp(),
       preferences: {
         theme:       'dark',
-        currency:    '€',      // ← fixed: symbole, pas code ISO
+        currency:    '€',
         weekStart:   'monday',
         accentColor: 'green',
       },
