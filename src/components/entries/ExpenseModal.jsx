@@ -56,10 +56,10 @@ export default function ExpenseModal({ open, onClose, onSubmit, initial = null, 
   const inputClass = 'w-full bg-surface-muted border border-surface-border rounded-xl py-2.5 text-sm text-zinc-900 dark:text-white placeholder:text-zinc-400 focus:outline-none focus:border-red-500/60 focus:ring-1 focus:ring-red-500/30 transition-all'
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center sm:p-4">
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative bg-surface-card border border-surface-border rounded-2xl w-full max-w-md shadow-2xl animate-slide-up">
-        <div className="flex items-center justify-between px-6 py-4 border-b border-surface-border">
+      <div className="relative bg-surface-card border border-surface-border rounded-t-2xl sm:rounded-2xl w-full sm:max-w-md shadow-2xl animate-slide-up">
+        <div className="flex items-center justify-between px-4 sm:px-6 py-4 border-b border-surface-border">
           <div className="flex items-center gap-2">
             <div className="w-7 h-7 bg-red-500/15 rounded-lg flex items-center justify-center">
               <ArrowUpCircle size={14} className="text-red-400" />
@@ -73,7 +73,7 @@ export default function ExpenseModal({ open, onClose, onSubmit, initial = null, 
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="px-6 py-5 space-y-4">
+        <form onSubmit={handleSubmit} className="px-4 sm:px-6 py-4 sm:py-5 space-y-4">
           {/* Catégorie */}
           <div>
             <label className="block text-xs text-zinc-500 font-medium mb-2">Catégorie</label>

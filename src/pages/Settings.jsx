@@ -79,9 +79,9 @@ export default function Settings() {
 
   return (
     <AppLayout>
-      <div className="px-6 py-8 max-w-2xl mx-auto space-y-6 animate-fade-in">
+      <div className="px-4 sm:px-6 py-6 sm:py-8 max-w-2xl mx-auto space-y-5 sm:space-y-6 animate-fade-in">
         <div>
-          <h1 className="text-2xl font-bold text-zinc-900 dark:text-white">Paramètres</h1>
+          <h1 className="text-xl sm:text-2xl font-bold text-zinc-900 dark:text-white">Paramètres</h1>
           <p className="text-zinc-500 text-sm mt-0.5">Personnalise ton expérience</p>
         </div>
 

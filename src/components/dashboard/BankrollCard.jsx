@@ -35,7 +35,7 @@ export default function BankrollCard({ bankroll, netProfit, currency, onUpdate, 
 
   return (
     <div className={clsx(
-      'bg-surface-card rounded-2xl p-5 border col-span-2 lg:col-span-1',
+      'bg-surface-card rounded-2xl p-4 sm:p-5 border col-span-2 sm:col-span-3 lg:col-span-1',
       isPositive ? 'border-brand-500/30' : 'border-red-500/30'
     )}>
       <div className="flex items-start justify-between mb-4">

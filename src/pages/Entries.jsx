@@ -21,7 +21,7 @@ export default function Entries() {
   const { userData } = useAuth()
   const storedCurrency = userData?.preferences?.currency || '€'
 
-  const [yearFilter,    setYearFilter]    = useState(CURRENT_YEAR)
+  const [yearFilter,    setYearFilter]    = useState('alltime')
   const [sortOrder,     setSortOrder]     = useState('desc')
   const [profitFilter,  setProfitFilter]  = useState('all')
   const [activeTab,     setActiveTab]     = useState('entries') // 'entries' | 'expenses'
@@ -91,11 +91,11 @@ export default function Entries() {
 
   return (
     <AppLayout>
-      <div className="px-6 py-8 max-w-7xl mx-auto space-y-6 animate-fade-in">
+      <div className="px-4 sm:px-6 py-6 sm:py-8 max-w-7xl mx-auto space-y-5 sm:space-y-6 animate-fade-in">
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
-            <h1 className="text-2xl font-bold text-zinc-900 dark:text-white">Historique</h1>
+            <h1 className="text-xl sm:text-2xl font-bold text-zinc-900 dark:text-white">Historique</h1>
             <p className="text-zinc-500 text-sm mt-0.5">
               {filteredEntries.length} entrée{filteredEntries.length !== 1 ? 's' : ''} · {filteredExpenses.length} sortie{filteredExpenses.length !== 1 ? 's' : ''}
             </p>
@@ -113,7 +113,7 @@ export default function Entries() {
         </div>
 
         {/* Filtres */}
-        <div className="flex flex-wrap items-center gap-3">
+        <div className="flex flex-wrap items-center gap-2">
           <div className="flex items-center gap-1.5 text-zinc-400 text-xs"><Filter size={13} /><span>Filtres</span></div>
           <select value={yearFilter} onChange={e => setYearFilter(e.target.value === 'alltime' ? 'alltime' : Number(e.target.value))}
             className="bg-surface-muted border border-surface-border rounded-xl px-3 py-1.5 text-sm text-zinc-900 dark:text-white focus:outline-none focus:border-brand-500/60 transition-all">
@@ -142,7 +142,7 @@ export default function Entries() {
 
         {/* Résumé stats */}
         {!loadE && !loadX && (filteredEntries.length > 0 || filteredExpenses.length > 0) && (
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          <div className="grid grid-cols-2 gap-3">
             {[
               { label: 'Dépôt',    value: fmtNoSign(stats.totalDeposit, displayCurrency),  color: 'text-blue-500 dark:text-blue-400' },
               { label: 'Profit',   value: fmt(stats.totalProfit, displayCurrency),           color: stats.totalProfit >= 0 ? 'text-brand-600 dark:text-brand-400' : 'text-red-500' },

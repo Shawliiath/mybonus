@@ -17,7 +17,7 @@ export default function EntriesTable({ entries, onEdit, onDelete, currency = '�
         <thead>
           <tr className="border-b border-surface-border">
             {['Weekend', 'Dépôt', 'Profit', 'ROI', 'Note', ''].map(h => (
-              <th key={h} className="text-left text-xs text-zinc-500 font-medium py-3 px-3 first:pl-0 last:pr-0 last:text-right">{h}</th>
+              <th key={h} className={`text-left text-xs text-zinc-500 font-medium py-3 px-2 sm:px-3 first:pl-0 last:pr-0 last:text-right ${h === 'Note' ? 'hidden sm:table-cell' : ''}`}>{h}</th>
             ))}
           </tr>
         </thead>
@@ -27,10 +27,10 @@ export default function EntriesTable({ entries, onEdit, onDelete, currency = '�
             const positive = entry.profit >= 0
             return (
               <tr key={entry.id} className="hover:bg-surface-muted/40 transition-colors group">
-                <td className="py-3.5 px-3 pl-0 font-medium text-zinc-700 dark:text-zinc-300 whitespace-nowrap">
+                <td className="py-3.5 px-2 sm:px-3 pl-0 font-medium text-zinc-700 dark:text-zinc-300 whitespace-nowrap text-xs sm:text-sm">
                   {entry.weekStart ? format(parseISO(entry.weekStart), 'dd MMM yyyy', { locale: fr }) : '—'}
                 </td>
-                <td className="py-3.5 px-3 font-mono text-blue-500 dark:text-blue-400">{entry.deposit?.toLocaleString('fr-FR', { minimumFractionDigits: 2 })} {currency}</td>
+                <td className="py-3.5 px-2 sm:px-3 font-mono text-blue-500 dark:text-blue-400 text-xs sm:text-sm">{entry.deposit?.toLocaleString('fr-FR', { minimumFractionDigits: 2 })} {currency}</td>
                 <td className="py-3.5 px-3 font-mono whitespace-nowrap">
                   <span className={clsx('flex items-center gap-1', positive ? 'text-brand-500 dark:text-brand-400' : 'text-red-500 dark:text-red-400')}>
                     {positive ? <TrendingUp size={13} /> : <TrendingDown size={13} />}
@@ -44,7 +44,7 @@ export default function EntriesTable({ entries, onEdit, onDelete, currency = '�
                     </span>
                   ) : '—'}
                 </td>
-                <td className="py-3.5 px-3 text-zinc-500 max-w-[160px] truncate text-xs">{entry.note || <span className="italic">—</span>}</td>
+                <td className="py-3.5 px-2 sm:px-3 text-zinc-500 max-w-[120px] truncate text-xs hidden sm:table-cell">{entry.note || <span className="italic">—</span>}</td>
                 <td className="py-3.5 pr-0 pl-3 text-right">
                   <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                     <button onClick={() => onEdit(entry)} className="p-1.5 rounded-lg text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-surface-muted transition-all"><Pencil size={14} /></button>

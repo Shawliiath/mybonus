@@ -47,7 +47,7 @@ export default function Dashboard() {
   const bankrollData   = userData?.bankroll || { amount: 0 }
   const monthlyGoal    = userData?.preferences?.monthlyGoal || 0
 
-  const [yearFilter,   setYearFilter]   = useState(CURRENT_YEAR)
+  const [yearFilter,   setYearFilter]   = useState('alltime')
   const [chartMode,    setChartMode]    = useState('area')
   const [viewCurrency, setViewCurrency] = useState(null)
   const [entryModal,   setEntryModal]   = useState(false)
@@ -125,12 +125,12 @@ export default function Dashboard() {
 
   return (
     <AppLayout>
-      <div className="px-6 py-8 max-w-7xl mx-auto space-y-6 animate-fade-in">
+      <div className="px-4 sm:px-6 py-6 sm:py-8 max-w-7xl mx-auto space-y-5 sm:space-y-6 animate-fade-in">
 
         {/* Header épuré */}
-        <div className="flex items-center justify-between gap-3 flex-wrap">
+        <div className="flex items-center justify-between gap-2 flex-wrap">
           <div>
-            <h1 className="text-2xl font-bold text-zinc-900 dark:text-white">Dashboard</h1>
+            <h1 className="text-xl sm:text-2xl font-bold text-zinc-900 dark:text-white">Dashboard</h1>
             <p className="text-zinc-500 text-sm mt-0.5">
               {entries.length} semaine{entries.length !== 1 ? 's' : ''}
               {expenses.length > 0 && ` · ${expenses.length} sortie${expenses.length !== 1 ? 's' : ''}`}
@@ -176,7 +176,7 @@ export default function Dashboard() {
 
         {/* Objectif mensuel */}
         {convertedGoal > 0 && (
-          <div className="bg-surface-card border border-surface-border rounded-2xl px-5 py-4">
+          <div className="bg-surface-card border border-surface-border rounded-2xl px-4 sm:px-5 py-3 sm:py-4">
             <div className="flex items-center justify-between mb-2.5">
               <div className="flex items-center gap-2">
                 <Trophy size={13} className="text-amber-400" />
@@ -211,7 +211,7 @@ export default function Dashboard() {
         )}
 
         {/* KPIs */}
-        <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4">
           <BankrollCard
             bankroll={{ amount: convertedBankroll }}
             netProfit={stats.netProfit}
@@ -227,7 +227,7 @@ export default function Dashboard() {
 
         {/* Charts */}
         {!loading && chartData.length > 0 && (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-4">
             <ChartCard title="Évolution du profit"
               actions={
                 <div className="flex rounded-lg bg-surface-muted border border-surface-border overflow-hidden text-xs">
