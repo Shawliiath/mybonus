@@ -19,6 +19,7 @@ export default function App() {
             <Route element={<ProtectedRoute />}>
               <Route path="/dashboard" element={<Dashboard />} />
               <Route path="/entries"   element={<Entries />} />
+              <Route path="/add"       element={<Dashboard />} />
               <Route path="/settings"  element={<Settings />} />
             </Route>
             <Route path="/" element={<Navigate to="/dashboard" replace />} />

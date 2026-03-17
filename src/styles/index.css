@@ -6,14 +6,6 @@
   * { box-sizing: border-box; }
   html { -webkit-font-smoothing: antialiased; }
 
-  /* ── Safe Area Support (iOS notch, Dynamic Island) ── */
-  :root {
-    --sat: env(safe-area-inset-top);
-    --sab: env(safe-area-inset-bottom);
-    --sal: env(safe-area-inset-left);
-    --sar: env(safe-area-inset-right);
-  }
-
   /* ── Dark mode (default) ── */
   :root {
     --bg:         #0f1117;
@@ -63,15 +55,4 @@
   .border-surface-border { border-color: var(--border); }
   .text-theme       { color: var(--text); }
   .text-theme-muted { color: var(--text-muted); }
-
-  /* Safe Area utilities */
-  .pt-safe { padding-top: max(1rem, var(--sat)); }
-  .pb-safe { padding-bottom: max(1rem, var(--sab)); }
-  .pl-safe { padding-left: max(1rem, var(--sal)); }
-  .pr-safe { padding-right: max(1rem, var(--sar)); }
-  
-  .mt-safe { margin-top: var(--sat); }
-  .mb-safe { margin-bottom: var(--sab); }
-  .ml-safe { margin-left: var(--sal); }
-  .mr-safe { margin-right: var(--sar); }
 }

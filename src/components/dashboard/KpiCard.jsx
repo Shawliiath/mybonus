@@ -9,21 +9,21 @@ export default function KpiCard({ label, value, sub, icon: Icon, trend, color = 
   }
   const c = colors[color] || colors.green
   return (
-    <div className={clsx('bg-surface-card border rounded-xl sm:rounded-2xl p-3 sm:p-5 flex flex-col gap-3 sm:gap-4 card-hover', c.border)}>
+    <div className={clsx('bg-surface-card border rounded-2xl p-5 flex flex-col gap-4 card-hover', c.border)}>
       <div className="flex items-start justify-between">
         <p className="text-xs text-zinc-500 font-medium uppercase tracking-wider">{label}</p>
-        <div className={clsx('w-8 h-8 sm:w-9 sm:h-9 rounded-lg sm:rounded-xl flex items-center justify-center', c.bg)}>
-          <Icon size={16} className={clsx(c.icon, 'sm:w-[17px] sm:h-[17px]')} />
+        <div className={clsx('w-9 h-9 rounded-xl flex items-center justify-center', c.bg)}>
+          <Icon size={17} className={c.icon} />
         </div>
       </div>
       {loading ? (
         <div className="space-y-2">
-          <div className="h-6 sm:h-7 w-20 sm:w-24 bg-surface-muted rounded-lg animate-pulse" />
-          <div className="h-3 sm:h-4 w-12 sm:w-16 bg-surface-muted rounded animate-pulse" />
+          <div className="h-7 w-24 bg-surface-muted rounded-lg animate-pulse" />
+          <div className="h-4 w-16 bg-surface-muted rounded animate-pulse" />
         </div>
       ) : (
         <div>
-          <p className="text-lg sm:text-2xl font-bold font-mono tracking-tight text-zinc-900 dark:text-white break-all">{value ?? '—'}</p>
+          <p className="text-2xl font-bold font-mono tracking-tight text-zinc-900 dark:text-white">{value ?? '—'}</p>
           {(sub || trend !== undefined) && (
             <div className="flex items-center gap-2 mt-1">
               {trend !== undefined && (

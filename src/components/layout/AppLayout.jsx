@@ -5,11 +5,11 @@ import { useTheme } from '../../context/ThemeContext'
 import { logout } from '../../firebase/auth'
 import { TrendingUp, LayoutDashboard, PlusCircle, List, Settings, LogOut, Menu, X, ChevronRight, Sun, Moon } from 'lucide-react'
 import clsx from 'clsx'
-import InstallPrompt from '../ui/InstallPrompt'
 
 const NAV = [
   { to: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
   { to: '/entries',   icon: List,             label: 'Historique' },
+  { to: '/add',       icon: PlusCircle,       label: 'Ajouter' },
   { to: '/settings',  icon: Settings,         label: 'Paramètres' },
 ]
 
@@ -85,8 +85,7 @@ export default function AppLayout({ children }) {
       </aside>
 
       {/* ── Mobile header ── */}
-      <header className={clsx('lg:hidden fixed top-0 left-0 right-0 border-b flex items-center justify-between px-4 z-20 backdrop-blur-sm pt-safe', headerBg)}
-        style={{ height: 'calc(3.5rem + env(safe-area-inset-top))' }}>
+      <header className={clsx('lg:hidden fixed top-0 left-0 right-0 h-14 border-b flex items-center justify-between px-4 z-20', headerBg)}>
         <div className="flex items-center gap-2">
           <div className="w-7 h-7 bg-brand-500 rounded-lg flex items-center justify-center"><TrendingUp size={14} className="text-white" /></div>
           <span className="font-bold tracking-tight text-zinc-900 dark:text-white">MyBonus</span>
@@ -104,40 +103,25 @@ export default function AppLayout({ children }) {
       {/* ── Mobile drawer ── */}
       {mobileOpen && (
         <div className="lg:hidden fixed inset-0 z-30">
-          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setMobileOpen(false)} />
-          <aside className={clsx('absolute left-0 top-0 bottom-0 w-72 border-r flex flex-col animate-slide-in-left pt-safe', sidebarBg)}>
+          <div className="absolute inset-0 bg-black/60" onClick={() => setMobileOpen(false)} />
+          <aside className={clsx('absolute left-0 top-0 bottom-0 w-64 border-r flex flex-col', sidebarBg)}>
             <div className={clsx('flex items-center justify-between px-5 h-14 border-b', isDark ? 'border-surface-border' : 'border-zinc-200')}>
-              <div className="flex items-center gap-2">
-                <div className="w-7 h-7 bg-brand-500 rounded-lg flex items-center justify-center"><TrendingUp size={14} className="text-white" /></div>
-                <span className="font-bold text-zinc-900 dark:text-white">MyBonus</span>
-              </div>
-              <button onClick={() => setMobileOpen(false)} className="p-1"><X size={20} className="text-zinc-500" /></button>
+              <span className="font-bold">MyBonus</span>
+              <button onClick={() => setMobileOpen(false)}><X size={20} className="text-zinc-500" /></button>
             </div>
-            <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto"><NavItems onClick={() => setMobileOpen(false)} /></nav>
-            <div className={clsx('px-3 pb-safe pt-4 border-t', isDark ? 'border-surface-border' : 'border-zinc-200')}>
-              {/* User info */}
-              <div className={clsx('flex items-center gap-3 px-3 py-2.5 rounded-xl mb-3', isDark ? 'bg-surface-muted' : 'bg-zinc-100')}>
-                <div className="w-9 h-9 rounded-lg bg-brand-500/20 border border-brand-500/30 flex items-center justify-center text-brand-400 font-bold flex-shrink-0">{initial}</div>
-                <div className="min-w-0 flex-1">
-                  <p className="text-sm font-medium truncate text-zinc-900 dark:text-white">{userData?.displayName || user?.displayName}</p>
-                  <p className={clsx('text-xs truncate', isDark ? 'text-zinc-600' : 'text-zinc-400')}>{user?.email}</p>
-                </div>
-              </div>
-              <button onClick={handleLogout} className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-zinc-500 hover:text-red-400 hover:bg-red-400/5 text-sm transition-all font-medium">
-                <LogOut size={16} />Déconnexion
+            <nav className="flex-1 px-3 py-4 space-y-1"><NavItems onClick={() => setMobileOpen(false)} /></nav>
+            <div className={clsx('px-3 pb-4 border-t pt-4', isDark ? 'border-surface-border' : 'border-zinc-200')}>
+              <button onClick={toggle} className={clsx('w-full flex items-center gap-3 px-3 py-2 rounded-xl text-sm mb-2 transition-all', isDark ? 'text-zinc-400 hover:text-white hover:bg-surface-muted' : 'text-zinc-500 hover:text-zinc-900 hover:bg-zinc-100')}>
+                {isDark ? <Sun size={16} className="text-amber-400" /> : <Moon size={16} className="text-indigo-400" />}
+                {isDark ? 'Mode clair' : 'Mode sombre'}
               </button>
+              <button onClick={handleLogout} className="w-full flex items-center gap-3 px-3 py-2 text-zinc-500 hover:text-red-400 text-sm transition-colors"><LogOut size={16} />Déconnexion</button>
             </div>
           </aside>
         </div>
       )}
 
-      <main className="flex-1 lg:ml-60 min-h-screen pb-safe" 
-        style={{ paddingTop: 'calc(3.5rem + env(safe-area-inset-top))' }}>
-        <div className="lg:pt-0">{children}</div>
-      </main>
-      
-      {/* Install Prompt */}
-      <InstallPrompt />
+      <main className="flex-1 lg:ml-60 pt-14 lg:pt-0 min-h-screen">{children}</main>
     </div>
   )
 }

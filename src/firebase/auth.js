@@ -31,7 +31,7 @@ export async function logout() {
 }
 
 async function createUserDocument(user, extraData = {}) {
-  const ref = doc(db, 'users', user.uid)
+  const ref  = doc(db, 'users', user.uid)
   const snap = await getDoc(ref)
   if (!snap.exists()) {
     await setDoc(ref, {
@@ -42,9 +42,13 @@ async function createUserDocument(user, extraData = {}) {
       createdAt:   serverTimestamp(),
       preferences: {
         theme:       'dark',
-        currency:    'EUR',
+        currency:    '€',      // ← fixed: symbole, pas code ISO
         weekStart:   'monday',
         accentColor: 'green',
+      },
+      bankroll: {
+        amount:    0,
+        updatedAt: serverTimestamp(),
       },
     })
   }

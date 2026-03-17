@@ -38,8 +38,8 @@ export default function Login() {
           <span className="text-2xl font-bold tracking-tight">MyBonus</span>
         </div>
         <div className="bg-surface-card border border-surface-border rounded-2xl p-8 shadow-2xl">
-          <h1 className="text-center text-xl font-semibold mb-1">Bon retour </h1>
-          <p className="text-center text-zinc-500 text-sm mb-8">Connecte-toi pour voir tes performances</p>
+          <h1 className="text-xl font-semibold mb-1">Bon retour 👋</h1>
+          <p className="text-zinc-500 text-sm mb-8">Connecte-toi pour voir tes performances</p>
           <button onClick={handleGoogle} disabled={loading}
             className="w-full flex items-center justify-center gap-3 bg-surface-muted hover:bg-zinc-700 border border-surface-border rounded-xl py-3 px-4 text-sm font-medium transition-all mb-6 disabled:opacity-50">
             <GoogleIcon />Continuer avec Google
