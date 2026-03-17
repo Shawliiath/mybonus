@@ -7,6 +7,8 @@ import Register from './pages/Register'
 import Dashboard from './pages/Dashboard'
 import Entries from './pages/Entries'
 import Settings from './pages/Settings'
+import Analytics from './pages/Analytics'
+import SharedView from './pages/SharedView'
 
 export default function App() {
   return (
@@ -16,10 +18,11 @@ export default function App() {
           <Routes>
             <Route path="/login"    element={<Login />} />
             <Route path="/register" element={<Register />} />
+            <Route path="/share/:token" element={<SharedView />} />
             <Route element={<ProtectedRoute />}>
               <Route path="/dashboard" element={<Dashboard />} />
               <Route path="/entries"   element={<Entries />} />
-              <Route path="/add"       element={<Dashboard />} />
+              <Route path="/analytics" element={<Analytics />} />
               <Route path="/settings"  element={<Settings />} />
             </Route>
             <Route path="/" element={<Navigate to="/dashboard" replace />} />

@@ -83,3 +83,22 @@ export async function getBankroll(userId) {
   const snap = await getDoc(doc(db, 'users', userId))
   return snap.exists() ? (snap.data().bankroll || { amount: 0 }) : { amount: 0 }
 }
+
+// ─── Share token (mode lecture seule) ────────────────────────────────────────
+
+export async function setShareToken(userId, token) {
+  return updateDoc(doc(db, 'users', userId), { shareToken: token })
+}
+
+export async function getUserByShareToken(token) {
+  const snap = await getDocs(query(collection(db, 'users'), where('shareToken', '==', token)))
+  if (snap.empty) return null
+  const userDoc = snap.docs[0]
+  const entries  = await getDocs(query(collection(db, 'users', userDoc.id, 'entries'), orderBy('weekStart', 'desc')))
+  const expenses = await getDocs(query(collection(db, 'users', userDoc.id, 'expenses'), orderBy('date', 'desc')))
+  return {
+    user:     userDoc.data(),
+    entries:  entries.docs.map(d  => ({ id: d.id,  ...d.data()  })),
+    expenses: expenses.docs.map(d => ({ id: d.id,  ...d.data()  })),
+  }
+}
