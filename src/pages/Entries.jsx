@@ -92,48 +92,47 @@ export default function Entries() {
   return (
     <AppLayout>
       <div className="px-4 sm:px-6 py-6 sm:py-8 max-w-7xl mx-auto space-y-5 sm:space-y-6 animate-fade-in">
-        {/* Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        {/* Header ligne 1 : titre + boutons */}
+        <div className="flex items-center justify-between gap-2">
           <div>
             <h1 className="text-xl sm:text-2xl font-bold text-zinc-900 dark:text-white">Historique</h1>
             <p className="text-zinc-500 text-sm mt-0.5">
-              {filteredEntries.length} entrée{filteredEntries.length !== 1 ? 's' : ''} · {filteredExpenses.length} sortie{filteredExpenses.length !== 1 ? 's' : ''}
+              {filteredEntries.length} entrée{filteredEntries.length !== 1 ? 's' : ''}
+              {filteredExpenses.length > 0 && ` · ${filteredExpenses.length} sortie${filteredExpenses.length !== 1 ? 's' : ''}`}
             </p>
           </div>
-          <div className="flex items-center gap-1.5 flex-wrap justify-end">
+          <div className="flex items-center gap-2 shrink-0">
             <button onClick={() => { setEditExpense(null); setExpenseModal(true) }}
-              className="flex items-center gap-2 bg-red-500/10 hover:bg-red-500/20 border border-red-500/20 text-red-400 font-semibold rounded-xl px-4 py-2 text-sm transition-all">
-              <ArrowUpCircle size={16} />Sortie
+              className="flex items-center gap-1.5 bg-red-500/10 hover:bg-red-500/20 border border-red-500/20 text-red-400 font-semibold rounded-xl px-3 py-2 text-sm transition-all">
+              <ArrowUpCircle size={15} />Sortie
             </button>
             <button onClick={() => { setEditEntry(null); setEntryModal(true) }}
-              className="flex items-center gap-2 bg-brand-500 hover:bg-brand-400 text-white font-semibold rounded-xl px-4 py-2 text-sm transition-all shadow-lg shadow-brand-500/25">
-              <PlusCircle size={16} />Ajouter
+              className="flex items-center gap-1.5 bg-brand-500 hover:bg-brand-400 text-white font-semibold rounded-xl px-3 py-2 text-sm transition-all shadow-lg shadow-brand-500/25">
+              <PlusCircle size={15} />Ajouter
             </button>
           </div>
         </div>
 
-        {/* Filtres */}
+        {/* Filtres ligne 2 */}
         <div className="flex flex-wrap items-center gap-2">
-          <div className="flex items-center gap-1.5 text-zinc-400 text-xs"><Filter size={13} /><span>Filtres</span></div>
           <select value={yearFilter} onChange={e => setYearFilter(e.target.value === 'alltime' ? 'alltime' : Number(e.target.value))}
             className="bg-surface-muted border border-surface-border rounded-xl px-3 py-1.5 text-sm text-zinc-900 dark:text-white focus:outline-none focus:border-brand-500/60 transition-all">
-            {YEARS.map(y => <option key={y} value={y}>{y === 'alltime' ? '🗓 Alltime' : y}</option>)}
+            {YEARS.map(y => <option key={y} value={y}>{y === 'alltime' ? 'Alltime' : y}</option>)}
           </select>
-          <div className="flex rounded-xl bg-surface-muted border border-surface-border overflow-hidden">
-            {[{ v: 'all', l: 'Tout' }, { v: 'positive', l: '✓ Positifs' }, { v: 'negative', l: '✗ Négatifs' }].map(({ v, l }) => (
+          <div className="flex rounded-xl bg-surface-muted border border-surface-border overflow-hidden text-xs">
+            {[{ v: 'all', l: 'Tout' }, { v: 'positive', l: '✓ Pos' }, { v: 'negative', l: '✗ Nég' }].map(({ v, l }) => (
               <button key={v} onClick={() => setProfitFilter(v)} className={filterBtn(profitFilter === v)}>{l}</button>
             ))}
           </div>
-          <div className="flex rounded-xl bg-surface-muted border border-surface-border overflow-hidden">
+          <div className="flex rounded-xl bg-surface-muted border border-surface-border overflow-hidden text-xs">
             {[{ v: 'desc', l: '↓ Récent' }, { v: 'asc', l: '↑ Ancien' }].map(({ v, l }) => (
               <button key={v} onClick={() => setSortOrder(v)} className={filterBtn(sortOrder === v)}>{l}</button>
             ))}
           </div>
-          {/* Vue devise */}
           <div className="flex rounded-xl bg-surface-muted border border-surface-border overflow-hidden text-xs">
             {CURRENCIES.map(c => (
               <button key={c} onClick={() => setViewCurrency(c === storedCurrency ? null : c)}
-                className={clsx('px-2.5 py-1.5 transition-all font-mono', (viewCurrency || storedCurrency) === c ? 'bg-brand-500/20 text-brand-400' : 'text-zinc-500 hover:text-zinc-300')}>
+                className={clsx('px-2 py-1.5 transition-all font-mono', (viewCurrency || storedCurrency) === c ? 'bg-brand-500/20 text-brand-400' : 'text-zinc-500 hover:text-zinc-300')}>
                 {c}
               </button>
             ))}

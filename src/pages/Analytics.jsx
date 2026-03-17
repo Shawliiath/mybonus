@@ -106,7 +106,7 @@ function Heatmap({ entries, year, currency = '€' }) {
                   key={i}
                   onMouseEnter={() => setActive({ i, val, week: w })}
                   onMouseLeave={() => setActive(null)}
-                  onClick={() => setActive(active?.i === i ? null : { i, val, week: w })}
+                  onClick={() => setActive({ i, val, week: w })}
                   className={clsx(
                     'w-3.5 h-3.5 rounded-sm shrink-0 transition-all cursor-pointer',
                     getColor(val),
