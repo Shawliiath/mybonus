@@ -103,6 +103,7 @@ export default function Dashboard() {
     const m = now.getMonth()
     const y = now.getFullYear()
     return convertedEntries
+      .filter(e => e.status !== 'pending')
       .filter(e => {
         if (!e.weekStart) return false
         const d = new Date(e.weekStart)

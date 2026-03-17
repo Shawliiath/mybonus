@@ -117,7 +117,7 @@ export default function Entries() {
           <div className="flex items-center gap-1.5 text-zinc-400 text-xs"><Filter size={13} /><span>Filtres</span></div>
           <select value={yearFilter} onChange={e => setYearFilter(e.target.value === 'alltime' ? 'alltime' : Number(e.target.value))}
             className="bg-surface-muted border border-surface-border rounded-xl px-3 py-1.5 text-sm text-zinc-900 dark:text-white focus:outline-none focus:border-brand-500/60 transition-all">
-            {YEARS.map(y => <option key={y} value={y}>{y === 'alltime' ? ' Alltime' : y}</option>)}
+            {YEARS.map(y => <option key={y} value={y}>{y === 'alltime' ? '🗓 Alltime' : y}</option>)}
           </select>
           <div className="flex rounded-xl bg-surface-muted border border-surface-border overflow-hidden">
             {[{ v: 'all', l: 'Tout' }, { v: 'positive', l: '✓ Positifs' }, { v: 'negative', l: '✗ Négatifs' }].map(({ v, l }) => (
