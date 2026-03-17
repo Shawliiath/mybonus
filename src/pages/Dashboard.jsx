@@ -13,6 +13,7 @@ import EntriesTable from '../components/entries/EntriesTable'
 import EntryModal from '../components/entries/EntryModal'
 import ExpenseModal from '../components/entries/ExpenseModal'
 import ConfirmDialog from '../components/ui/ConfirmDialog'
+import CryptoSummaryCard from '../components/dashboard/CryptoSummaryCard'
 import {
   TrendingUp, TrendingDown, Star, PlusCircle,
   CalendarDays, Percent, Trophy, Download, ArrowUpCircle, RefreshCw
@@ -227,6 +228,9 @@ export default function Dashboard() {
           <KpiCard label="ROI net" value={`${stats.avgRoi >= 0 ? '+' : ''}${stats.avgRoi.toFixed(2)}%`} icon={Percent} color={stats.avgRoi >= 0 ? 'green' : 'red'} loading={loading} />
           <KpiCard label="Win rate" value={`${stats.winRate.toFixed(0)}%`} icon={Trophy} color="amber" sub={`${convertedEntries.filter(e => e.profit >= 0).length} positifs`} loading={loading} />
         </div>
+
+        {/* Bloc résumé crypto */}
+        <CryptoSummaryCard />
 
         {/* Charts */}
         {!loading && chartData.length > 0 && (

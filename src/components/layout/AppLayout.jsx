@@ -3,14 +3,14 @@ import { NavLink, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
 import { useTheme } from '../../context/ThemeContext'
 import { logout } from '../../firebase/auth'
-import { TrendingUp, LayoutDashboard, List, Settings, LogOut, Menu, X, ChevronRight, Sun, Moon, BarChart2 } from 'lucide-react'
+import { TrendingUp, LayoutDashboard, List, Settings, LogOut, Menu, X, ChevronRight, Sun, Moon, BarChart2, Wallet } from 'lucide-react'
 import clsx from 'clsx'
 
 const NAV = [
   { to: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
-  { to: '/entries',   icon: List,        label: 'Historique' },
-  { to: '/analytics', icon: BarChart2,    label: 'Analytics' },
-
+  { to: '/entries',   icon: List,            label: 'Historique' },
+  { to: '/analytics', icon: BarChart2,        label: 'Analytics' },
+  { to: '/portfolio', icon: Wallet,           label: 'Portfolio' },
   { to: '/settings',  icon: Settings,         label: 'Paramètres' },
 ]
 
