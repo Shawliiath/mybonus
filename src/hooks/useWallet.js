@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect } from 'react'
-import { useAccount, useDisconnect } from 'wagmi'
-import { useAppKit } from '@reown/appkit/react'
+import { useAccount } from 'wagmi'
+import { useAppKit, useDisconnect } from '@reown/appkit/react'
 
 const LS_KEY = 'mybonus_wallet_address'
 
@@ -263,7 +263,7 @@ async function fetchPortfolioData(addr) {
 // ─── Hook ─────────────────────────────────────────────────────────────────────
 export function useWallet() {
   const { address: wagmiAddress, isConnected } = useAccount()
-  const { disconnect: wagmiDisconnect }        = useDisconnect()
+  const { disconnect: appkitDisconnect }       = useDisconnect()
   const { open }                               = useAppKit()
 
   const [manualAddress, setManualAddress] = useState(() => localStorage.getItem(LS_KEY) || '')
@@ -301,13 +301,16 @@ export function useWallet() {
     setManualAddress(addr)
   }, [])
 
-  const disconnect = useCallback(() => {
-    if (isConnected) wagmiDisconnect()
+  const disconnect = useCallback(async () => {
+    // AppKit useDisconnect déconnecte tous les namespaces (ETH + Solana)
+    // C'est l'API correcte selon la doc Reown pour le multi-chain
+    await appkitDisconnect()
     localStorage.removeItem(LS_KEY)
+    localStorage.removeItem('mybonus_solana_address')
     setManualAddress('')
     setWalletData(null)
     setError(null)
-  }, [isConnected, wagmiDisconnect])
+  }, [appkitDisconnect])
 
   const refresh = useCallback(() => {
     if (activeAddress) loadData(activeAddress)

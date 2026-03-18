@@ -1,6 +1,8 @@
 import { createAppKit } from '@reown/appkit/react'
 import { WagmiAdapter } from '@reown/appkit-adapter-wagmi'
-import { mainnet } from '@reown/appkit/networks'
+import { SolanaAdapter } from '@reown/appkit-adapter-solana/react'
+import { PhantomWalletAdapter, SolflareWalletAdapter } from '@solana/wallet-adapter-wallets'
+import { mainnet, solana } from '@reown/appkit/networks'
 import { QueryClient } from '@tanstack/react-query'
 
 export const queryClient = new QueryClient()
@@ -14,15 +16,25 @@ const metadata = {
   icons: ['https://avatars.githubusercontent.com/u/37784886'],
 }
 
-export const networks = [mainnet]
-
+// ─── EVM (Ethereum) ───────────────────────────────────────────────────────────
 export const wagmiAdapter = new WagmiAdapter({
-  networks,
+  networks: [mainnet],
   projectId,
 })
 
+// ─── Solana ───────────────────────────────────────────────────────────────────
+const solanaAdapter = new SolanaAdapter({
+  wallets: [
+    new PhantomWalletAdapter(),
+    new SolflareWalletAdapter(),
+  ],
+})
+
+// ─── AppKit multi-chain ───────────────────────────────────────────────────────
+export const networks = [mainnet, solana]
+
 createAppKit({
-  adapters:  [wagmiAdapter],
+  adapters:  [wagmiAdapter, solanaAdapter],
   networks,
   projectId,
   metadata,
@@ -30,6 +42,8 @@ createAppKit({
     analytics: false,
     email:     false,
     socials:   false,
+    onramp:    false,
+    swaps:     false,
   },
   themeMode: 'dark',
   themeVariables: {
@@ -39,3 +53,4 @@ createAppKit({
 })
 
 export const wagmiConfig = wagmiAdapter.wagmiConfig
+

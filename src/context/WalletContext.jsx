@@ -1,15 +1,20 @@
 /**
- * WalletContext — partage l'état du wallet entre Portfolio et Dashboard
- * sans refaire de fetch. Le Dashboard lit directement walletData.
+ * WalletContext — partage l'état du wallet ETH + Solana entre Portfolio et Dashboard
  */
 import { createContext, useContext } from 'react'
 import { useWallet } from '../hooks/useWallet'
+import { useSolanaWallet } from '../hooks/useSolanaWallet'
 
 const WalletContext = createContext(null)
 
 export function WalletProvider({ children }) {
-  const wallet = useWallet()
-  return <WalletContext.Provider value={wallet}>{children}</WalletContext.Provider>
+  const eth     = useWallet()
+  const solana  = useSolanaWallet()
+  return (
+    <WalletContext.Provider value={{ eth, solana }}>
+      {children}
+    </WalletContext.Provider>
+  )
 }
 
 export function useWalletContext() {
@@ -17,3 +22,4 @@ export function useWalletContext() {
   if (!ctx) throw new Error('useWalletContext must be used within WalletProvider')
   return ctx
 }
+
