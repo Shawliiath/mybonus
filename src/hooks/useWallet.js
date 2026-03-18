@@ -12,12 +12,12 @@ export function shortAddr(addr) {
   return addr.slice(0, 6) + '…' + addr.slice(-4)
 }
 
-// ─── RPC publics avec fallback ────────────────────────────────────────────────
+// ─── RPC publics avec CORS OK (sans auth, sans rate-limit agressif) ───────────
 const PUBLIC_RPCS = [
-  'https://eth.llamarpc.com',
-  'https://rpc.ankr.com/eth',
-  'https://cloudflare-eth.com',
-  'https://ethereum.publicnode.com',
+  'https://ethereum.publicnode.com',       // CORS OK, stable
+  'https://1rpc.io/eth',                   // CORS OK, privacy-focused
+  'https://rpc.flashbots.net',             // CORS OK, Flashbots
+  'https://eth.drpc.org',                  // CORS OK, dRPC
 ]
 
 async function rpcPost(url, method, params) {
@@ -59,97 +59,138 @@ const KNOWN_TOKENS = [
   { contractAddress: '0x4d224452801aced8b2f0aebe155379bb5d594381', symbol: 'APE',  name: 'ApeCoin',           decimals: 18, cgId: 'apecoin' },
 ]
 
-// ─── Transactions via eth_getBlockByNumber + filtre adresse ───────────────────
-// Plus simple : on utilise les Transfer events ERC20 + txlist via RPC
+// ─── Transactions via Ethplorer API (freekey publique, CORS OK) ───────────────
+// Docs: https://github.com/EverexIO/Ethplorer/wiki/ethplorer-api
+const ETHPLORER_API = 'https://api.ethplorer.io'
+
+async function ethplorerGet(path) {
+  const url = `${ETHPLORER_API}${path}${path.includes('?') ? '&' : '?'}apiKey=freekey`
+  const res = await fetch(url)
+  if (!res.ok) throw new Error(`Ethplorer HTTP ${res.status}`)
+  return res.json()
+}
+
 async function fetchTransactions(addr) {
-  const addrLower = addr.toLowerCase()
-  const txs = []
-
   try {
-    // Récupère le dernier bloc
-    const latestHex = await rpc('eth_blockNumber', [])
-    const latest    = parseInt(latestHex, 16)
+    // getAddressTransactions : 50 dernières TX ETH + token transfers
+    const [ethData, tokenData] = await Promise.allSettled([
+      ethplorerGet(`/getAddressTransactions/${addr}?limit=25&showZeroValues=1`),
+      ethplorerGet(`/getAddressHistory/${addr}?limit=25&type=transfer`),
+    ])
 
-    // Scan les 500 derniers blocs pour les tx impliquant cette adresse
-    // Via eth_getLogs — Transfer events ERC20 (topic[1] ou topic[2] = addr)
-    const paddedAddr = '0x' + addrLower.slice(2).padStart(64, '0')
-    const fromBlock  = '0x' + Math.max(0, latest - 1000).toString(16)
+    const addrLower = addr.toLowerCase()
+    const txMap     = new Map()
 
-    // Transfer OUT (from = addr)
-    const logsOut = await rpc('eth_getLogs', [{
-      fromBlock,
-      toBlock: 'latest',
-      topics: [
-        '0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef', // Transfer(address,address,uint256)
-        paddedAddr, // from
-        null,
-      ],
-    }])
+    // ── TX ETH (getAddressTransactions) ─────────────────────────────────────
+    // Retourne un array d'objets : { hash, timestamp, from, to, value, success }
+    const ethList = ethData.status === 'fulfilled' && Array.isArray(ethData.value)
+      ? ethData.value : []
 
-    // Transfer IN (to = addr)
-    const logsIn = await rpc('eth_getLogs', [{
-      fromBlock,
-      toBlock: 'latest',
-      topics: [
-        '0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef',
-        null,
-        paddedAddr, // to
-      ],
-    }])
-
-    const allLogs = [...(logsOut || []), ...(logsIn || [])]
-
-    // Déduplique par txHash et récupère les blocs pour les timestamps
-    const hashSet  = new Set()
-    const blockSet = new Set()
-    for (const log of allLogs) {
-      if (!hashSet.has(log.transactionHash)) {
-        hashSet.add(log.transactionHash)
-        blockSet.add(log.blockNumber)
-      }
+    for (const tx of ethList) {
+      const ts        = (tx.timestamp ?? 0) * 1000
+      const direction = tx.from?.toLowerCase() === addrLower ? 'out' : 'in'
+      txMap.set(tx.hash, {
+        hash:      tx.hash,
+        from:      tx.from || '',
+        to:        tx.to   || '',
+        value:     tx.value ?? 0,
+        symbol:    'ETH',
+        isToken:   false,
+        timestamp: ts > 0 ? ts : Date.now(),
+        direction,
+        isError:   tx.success === false,
+        gasPrice:  tx.gasPrice ? tx.gasPrice / 1e9 : 0,
+      })
     }
 
-    // Récupère les timestamps des blocs uniques
-    const blockTimestamps = {}
-    await Promise.allSettled(
-      [...blockSet].slice(0, 30).map(async (blockHex) => {
-        const block = await rpc('eth_getBlockByNumber', [blockHex, false])
-        if (block) blockTimestamps[blockHex] = parseInt(block.timestamp, 16) * 1000
-      })
-    )
+    // ── Token transfers (getAddressHistory) ─────────────────────────────────
+    // Retourne { operations: [{transactionHash, timestamp, from, to, value, tokenInfo}] }
+    const tokenOps = tokenData.status === 'fulfilled' && Array.isArray(tokenData.value?.operations)
+      ? tokenData.value.operations : []
 
-    // Construit les transactions à partir des logs
-    for (const log of allLogs) {
-      if (txs.some(t => t.hash === log.transactionHash)) continue
-      const from      = '0x' + (log.topics[1] ?? '').slice(26)
-      const to        = '0x' + (log.topics[2] ?? '').slice(26)
-      const rawValue  = log.data && log.data !== '0x' ? BigInt(log.data) : 0n
-      // Cherche le token connu
-      const token     = KNOWN_TOKENS.find(t => t.contractAddress === log.address?.toLowerCase())
-      const decimals  = token?.decimals ?? 18
-      const value     = Number(rawValue) / Math.pow(10, decimals)
-      const symbol    = token?.symbol ?? '?'
-      const direction = from.toLowerCase() === addrLower ? 'out' : 'in'
-      txs.push({
-        hash:      log.transactionHash,
-        from,
-        to,
+    for (const op of tokenOps) {
+      const hash = op.transactionHash
+      if (!hash || txMap.has(hash)) continue
+      const decimals  = parseInt(op.tokenInfo?.decimals ?? '18', 10)
+      const value     = Number(op.value || 0) / Math.pow(10, decimals)
+      const ts        = (op.timestamp ?? 0) * 1000
+      const direction = op.from?.toLowerCase() === addrLower ? 'out' : 'in'
+      txMap.set(hash, {
+        hash,
+        from:      op.from || '',
+        to:        op.to   || '',
         value,
-        symbol,
+        symbol:    op.tokenInfo?.symbol || '?',
         isToken:   true,
-        timestamp: blockTimestamps[log.blockNumber] ?? 0,
+        timestamp: ts > 0 ? ts : Date.now(),
         direction,
         isError:   false,
         gasPrice:  0,
       })
     }
 
-    // Trie par timestamp décroissant
-    txs.sort((a, b) => b.timestamp - a.timestamp)
-    return txs.slice(0, 25)
+    const result = [...txMap.values()]
+      .sort((a, b) => b.timestamp - a.timestamp)
+      .slice(0, 30)
+
+    if (result.length > 0) return result
+    throw new Error('Ethplorer: aucune transaction')
 
   } catch (e) {
-    console.warn('fetchTransactions error:', e.message)
+    console.warn('fetchTransactions (Ethplorer) error:', e.message)
+    return fetchTransactionsFallback(addr)
+  }
+}
+
+// ─── Fallback RPC si Etherscan indisponible ───────────────────────────────────
+async function fetchTransactionsFallback(addr) {
+  try {
+    const addrLower  = addr.toLowerCase()
+    const paddedAddr = '0x' + addrLower.slice(2).padStart(64, '0')
+    const latestHex  = await rpc('eth_blockNumber', [])
+    const latest     = parseInt(latestHex, 16)
+    const fromBlock  = '0x' + Math.max(0, latest - 500).toString(16)
+    const TRANSFER_TOPIC = '0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef'
+
+    const [logsOut, logsIn] = await Promise.all([
+      rpc('eth_getLogs', [{ fromBlock, toBlock: 'latest', topics: [TRANSFER_TOPIC, paddedAddr, null] }]).catch(() => []),
+      rpc('eth_getLogs', [{ fromBlock, toBlock: 'latest', topics: [TRANSFER_TOPIC, null, paddedAddr] }]).catch(() => []),
+    ])
+
+    const allLogs = [...(logsOut || []), ...(logsIn || [])]
+    const blockNums = [...new Set(allLogs.map(l => l.blockNumber))].slice(0, 20)
+    const blockTs   = {}
+    await Promise.allSettled(blockNums.map(async (bHex) => {
+      const block = await rpc('eth_getBlockByNumber', [bHex, false])
+      if (block?.timestamp) blockTs[bHex] = parseInt(block.timestamp, 16) * 1000
+    }))
+
+    const seen = new Set()
+    const txs  = []
+    for (const log of allLogs) {
+      if (seen.has(log.transactionHash)) continue
+      seen.add(log.transactionHash)
+      const from     = '0x' + (log.topics[1] ?? '').slice(26)
+      const to       = '0x' + (log.topics[2] ?? '').slice(26)
+      const rawValue = log.data && log.data !== '0x' ? BigInt(log.data) : 0n
+      const token    = KNOWN_TOKENS.find(t => t.contractAddress === log.address?.toLowerCase())
+      const decimals = token?.decimals ?? 18
+      const ts       = blockTs[log.blockNumber] ?? Date.now()
+      txs.push({
+        hash:      log.transactionHash,
+        from, to,
+        value:     Number(rawValue) / Math.pow(10, decimals),
+        symbol:    token?.symbol ?? '?',
+        isToken:   true,
+        timestamp: ts,
+        direction: from.toLowerCase() === addrLower ? 'out' : 'in',
+        isError:   false,
+        gasPrice:  0,
+      })
+    }
+    return txs.sort((a, b) => b.timestamp - a.timestamp).slice(0, 25)
+  } catch (e) {
+    console.warn('fetchTransactionsFallback error:', e.message)
     return []
   }
 }

@@ -288,8 +288,8 @@ export default function Portfolio() {
           <KpiCard label="Variation 24h" value={`${isUp ? '+' : ''}${fmtEur(change24hAbs)}`}
             sub="sur le solde ETH"
             icon={isUp ? TrendingUp : TrendingDown} color={isUp ? 'green' : 'red'} />
-          <KpiCard label="Tokens ERC-20" value={d.tokens.length}
-            sub={d.tokens.length > 0 ? fmtEur(d.tokensValueEur) : 'aucun solde'}
+          <KpiCard label="Actifs" value={d.tokens.length + 1}
+            sub={fmtEur(d.totalValueEur)}
             icon={Coins} color="blue" />
         </div>
 
@@ -380,7 +380,7 @@ export default function Portfolio() {
                   <table className="w-full text-sm">
                     <thead>
                       <tr className="border-b border-surface-border">
-                        {['Type','Date','Montant ETH','Avec','Gas',''].map(h => (
+                        {['Type','Date','Montant','Avec','Gas (Gwei)',''].map(h => (
                           <th key={h} className="text-left text-xs text-zinc-500 font-medium py-2.5 px-2 first:pl-0 last:pr-0 whitespace-nowrap">{h}</th>
                         ))}
                       </tr>
@@ -399,7 +399,9 @@ export default function Portfolio() {
                             </span>
                           </td>
                           <td className="py-3.5 px-2 text-xs text-zinc-400 whitespace-nowrap">
-                            {format(new Date(tx.timestamp), 'dd MMM yy', { locale: fr })}
+                            {tx.timestamp && tx.timestamp > 0
+                              ? format(new Date(tx.timestamp), 'dd MMM yy', { locale: fr })
+                              : '—'}
                           </td>
                           <td className={clsx('py-3.5 px-2 font-mono font-semibold text-xs whitespace-nowrap',
                             tx.direction==='in' ? 'text-brand-400' : 'text-orange-400')}>
