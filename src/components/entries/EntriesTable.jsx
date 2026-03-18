@@ -62,7 +62,7 @@ export default function EntriesTable({ entries, onEdit, onDelete, onConfirm, onC
                 </td>
 
                 {/* Dépôt */}
-                <td className={clsx('py-3.5 px-2 sm:px-3 font-mono text-xs sm:text-sm',
+                <td className={clsx('py-3.5 px-2 sm:px-3 font-mono text-xs sm:text-sm whitespace-nowrap',
                   isPending ? 'text-zinc-600' : 'text-blue-400')}>
                   {entry.deposit?.toLocaleString('fr-FR', { minimumFractionDigits: 2 })} {currency}
                 </td>
