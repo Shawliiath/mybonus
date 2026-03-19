@@ -216,12 +216,12 @@ const CoinRow = memo(function CoinRow({ coin, listFilter, livePrice, onClick, is
       <div className="hidden sm:block shrink-0">
         <Sparkline data={sparkData.slice(-48)} isUp={isUp} />
       </div>
-      <div className="text-right shrink-0 w-20">
+      <div className="hidden sm:flex text-right shrink-0 w-20 justify-end">
         <p className={clsx('text-xs font-mono font-semibold', isUp ? 'text-emerald-400' : 'text-red-400')}>
           {isUp ? '▲' : '▼'} {Math.abs(pct ?? 0).toFixed(2)}%
         </p>
       </div>
-      <div className="text-right shrink-0 w-28 hidden md:block">
+      <div className="text-right shrink-0 w-28">
         <p className={clsx('text-sm font-semibold font-mono transition-colors duration-300',
           isSelected ? 'text-brand-400' : 'text-zinc-900 dark:text-white')}>
           {fmtEur(price)}
@@ -406,7 +406,7 @@ export default function Market() {
           <div>
             <h1 className="text-2xl font-bold text-zinc-900 dark:text-white flex items-center gap-2">
               <BarChart3 size={22} className="text-brand-400" />
-              Marchés
+              Crypto
             </h1>
             <div className="flex items-center gap-2 mt-0.5">
               <LiveDot />
@@ -460,8 +460,8 @@ export default function Market() {
               <div className="w-9" />
               <div className="flex-1">Actif</div>
               <div className="hidden sm:block w-20 text-right">7J</div>
-              <div className="w-20 text-right">Var.</div>
-              <div className="hidden md:block w-28 text-right">Prix / Mcap</div>
+              <div className="hidden sm:block w-20 text-right">Var.</div>
+              <div className="w-28 text-right">Prix / Mcap</div>
             </div>
 
             <div className="bg-surface-card border border-surface-border rounded-2xl overflow-hidden">
@@ -474,7 +474,7 @@ export default function Market() {
                     <div className="h-2.5 w-12 bg-surface-muted rounded animate-pulse" />
                   </div>
                   <div className="w-16 h-3 bg-surface-muted rounded animate-pulse" />
-                  <div className="hidden md:block w-24 h-3 bg-surface-muted rounded animate-pulse" />
+                  <div className="w-24 h-3 bg-surface-muted rounded animate-pulse" />
                 </div>
               )) : filteredCoins.length === 0 ? (
                 <div className="text-center py-16 text-zinc-600">

@@ -36,8 +36,8 @@ const NAV = [
   { to: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
   { to: '/entries',   icon: List,            label: 'Historique' },
   { to: '/analytics', icon: BarChart2,        label: 'Analytics' },
-  { to: '/market',    icon: Globe,            label: 'Marchés' },
-  { to: '/portfolio', icon: Wallet,           label: 'Portfolio' },
+  { to: '/market',    icon: Globe,            label: 'Crypto' },
+  { to: '/portfolio', icon: Wallet,           label: 'Wallets' },
   { to: '/settings',  icon: Settings,         label: 'Paramètres' },
 ]
 
