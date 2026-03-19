@@ -1,3 +1,6 @@
+const _CG_KEY = import.meta.env.VITE_COINGECKO_KEY ?? ''
+const _CG_HEADERS = _CG_KEY ? { 'x-cg-demo-api-key': _CG_KEY } : {}
+
 /**
  * useSolanaWallet
  * Récupère le solde SOL + tokens SPL + transactions via Helius.
@@ -32,28 +35,36 @@ async function solanaRpc(method, params = []) {
   return j.result
 }
 
-// ─── Prix SOL via CoinGecko ───────────────────────────────────────────────────
+// ─── Prix SOL — CoinGecko d'abord, CoinCap en fallback ───────────────────────
 async function fetchSolPrice() {
   try {
-    const r = await fetch(
-      'https://api.coingecko.com/api/v3/simple/price?ids=solana&vs_currencies=eur,usd&include_24hr_change=true',
-      { signal: AbortSignal.timeout(5000) }
+    const r = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=solana&vs_currencies=eur,usd&include_24hr_change=true', { headers: _CG_HEADERS, signal: AbortSignal.timeout(5000) }
     )
+    if (!r.ok) throw new Error(`CoinGecko ${r.status}`)
     const j = await r.json()
-    return {
-      eur:       j.solana?.eur            ?? 0,
-      usd:       j.solana?.usd            ?? 0,
-      change24h: j.solana?.eur_24h_change ?? 0,
-    }
+    if (j.solana?.eur) return { eur: j.solana.eur, usd: j.solana.usd ?? 0, change24h: j.solana.eur_24h_change ?? 0 }
+    throw new Error('CoinGecko: vide')
   } catch {
-    return { eur: 0, usd: 0, change24h: 0 }
+    try {
+      const [capRes, fxRes] = await Promise.all([
+        fetch('https://api.coincap.io/v2/assets/solana', { signal: AbortSignal.timeout(5000) }),
+        fetch('https://api.frankfurter.app/latest?from=USD&to=EUR', { signal: AbortSignal.timeout(4000) }).catch(() => null),
+      ])
+      if (!capRes.ok) throw new Error('CoinCap fail')
+      const j = await capRes.json()
+      const usd     = parseFloat(j.data?.priceUsd ?? 0)
+      const change  = parseFloat(j.data?.changePercent24Hr ?? 0)
+      const eurRate = fxRes?.ok ? (await fxRes.json()).rates?.EUR ?? 0.92 : 0.92
+      return { eur: usd * eurRate, usd, change24h: change }
+    } catch { return { eur: 0, usd: 0, change24h: 0 } }
   }
 }
 
 // ─── Tokens SPL connus ────────────────────────────────────────────────────────
+// stableFallback: prix EUR fixe si CoinGecko fail (stablecoins = ~1 USD = ~0.92 EUR)
 const KNOWN_SPL = {
-  'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v': { symbol: 'USDC', name: 'USD Coin',        decimals: 6, cgId: 'usd-coin' },
-  'Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB': { symbol: 'USDT', name: 'Tether USD',       decimals: 6, cgId: 'tether' },
+  'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v': { symbol: 'USDC', name: 'USD Coin',        decimals: 6, cgId: 'usd-coin',  stableFallback: 0.93 },
+  'Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB': { symbol: 'USDT', name: 'Tether USD',       decimals: 6, cgId: 'tether',    stableFallback: 0.93 },
   'So11111111111111111111111111111111111111112':    { symbol: 'wSOL', name: 'Wrapped SOL',      decimals: 9, cgId: 'solana' },
   'mSoLzYCxHdYgdzU16g5QSh3i5K3z3KZK7ytfqcJm7So': { symbol: 'mSOL', name: 'Marinade SOL',     decimals: 9, cgId: 'msol' },
   'DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263': { symbol: 'BONK', name: 'Bonk',             decimals: 5, cgId: 'bonk' },
@@ -67,22 +78,34 @@ const KNOWN_SPL = {
 
 async function fetchSplPrices(mints) {
   const cgIds = [...new Set(mints.map(m => KNOWN_SPL[m]?.cgId).filter(Boolean))]
-  if (!cgIds.length) return {}
+
+  // Fallback immédiat pour les stablecoins connus
+  const fallbackPrices = {}
+  for (const mint of mints) {
+    const meta = KNOWN_SPL[mint]
+    if (meta?.stableFallback) {
+      fallbackPrices[mint] = { eur: meta.stableFallback, usd: 1.0 }
+    }
+  }
+
+  if (!cgIds.length) return fallbackPrices
+
   try {
     const r = await fetch(
       `https://api.coingecko.com/api/v3/simple/price?ids=${cgIds.join(',')}&vs_currencies=eur,usd`,
-      { signal: AbortSignal.timeout(5000) }
+      { headers: _CG_HEADERS, signal: AbortSignal.timeout(6000) }
     )
+    if (!r.ok) return fallbackPrices
     const j = await r.json()
-    const prices = {}
+    const prices = { ...fallbackPrices }
     for (const mint of mints) {
       const meta = KNOWN_SPL[mint]
-      if (meta?.cgId && j[meta.cgId]) {
-        prices[mint] = { eur: j[meta.cgId].eur ?? 0, usd: j[meta.cgId].usd ?? 0 }
+      if (meta?.cgId && j[meta.cgId]?.eur) {
+        prices[mint] = { eur: j[meta.cgId].eur, usd: j[meta.cgId].usd ?? 0 }
       }
     }
     return prices
-  } catch { return {} }
+  } catch { return fallbackPrices }
 }
 
 // ─── Transactions via Helius Enhanced API ────────────────────────────────────

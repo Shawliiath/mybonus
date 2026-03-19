@@ -1,8 +1,9 @@
 import { createAppKit } from '@reown/appkit/react'
 import { WagmiAdapter } from '@reown/appkit-adapter-wagmi'
 import { SolanaAdapter } from '@reown/appkit-adapter-solana/react'
+import { BitcoinAdapter } from '@reown/appkit-adapter-bitcoin'
 import { PhantomWalletAdapter, SolflareWalletAdapter } from '@solana/wallet-adapter-wallets'
-import { mainnet, solana } from '@reown/appkit/networks'
+import { mainnet, solana, bitcoin } from '@reown/appkit/networks'
 import { QueryClient } from '@tanstack/react-query'
 
 export const queryClient = new QueryClient()
@@ -30,11 +31,14 @@ const solanaAdapter = new SolanaAdapter({
   ],
 })
 
+// ─── Bitcoin ──────────────────────────────────────────────────────────────────
+const bitcoinAdapter = new BitcoinAdapter({ projectId })
+
 // ─── AppKit multi-chain ───────────────────────────────────────────────────────
-export const networks = [mainnet, solana]
+export const networks = [mainnet, solana, bitcoin]
 
 createAppKit({
-  adapters:  [wagmiAdapter, solanaAdapter],
+  adapters:  [wagmiAdapter, solanaAdapter, bitcoinAdapter],
   networks,
   projectId,
   metadata,
@@ -53,4 +57,3 @@ createAppKit({
 })
 
 export const wagmiConfig = wagmiAdapter.wagmiConfig
-

@@ -11,6 +11,7 @@ import Settings from './pages/Settings'
 import Analytics from './pages/Analytics'
 import SharedView from './pages/SharedView'
 import Portfolio from './pages/Portfolio'
+import Market from './pages/Market'
 
 function ProtectedApp() {
   return (
@@ -34,6 +35,7 @@ export default function App() {
               <Route path="/entries"   element={<Entries />} />
               <Route path="/analytics" element={<Analytics />} />
               <Route path="/portfolio" element={<Portfolio />} />
+              <Route path="/market"    element={<Market />} />
               <Route path="/settings"  element={<Settings />} />
             </Route>
             <Route path="/" element={<Navigate to="/dashboard" replace />} />

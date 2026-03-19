@@ -1,8 +1,8 @@
 import { useState } from 'react'
 import { useAuth } from '../context/AuthContext'
-import { updateUserPreferences, updateBankroll, setShareToken } from '../firebase/firestore'
+import { updateUserPreferences, updateBankroll, setShareToken, updateShareSettings } from '../firebase/firestore'
 import AppLayout from '../components/layout/AppLayout'
-import { Settings as SettingsIcon, Check, DollarSign, User, Wallet, Target, Share2, Copy, RefreshCw, X } from 'lucide-react'
+import { Settings as SettingsIcon, Check, DollarSign, User, Wallet, Target, Share2, Copy, RefreshCw, X, TrendingUp, List, ArrowUpCircle, BarChart2 } from 'lucide-react'
 import clsx from 'clsx'
 
 const CURRENCIES  = ['€', '$', '£', '₿', 'CHF', 'CAD']
@@ -12,11 +12,24 @@ function generateToken() {
   return Math.random().toString(36).slice(2, 10) + Math.random().toString(36).slice(2, 10)
 }
 
+const SHARE_OPTIONS = [
+  { key: 'showStats',    icon: TrendingUp,    label: 'KPIs & statistiques',         desc: 'Profit net, ROI, win rate, nombre de semaines' },
+  { key: 'showHistory',  icon: List,          label: 'Historique des entrées',       desc: 'Toutes les semaines avec profit et ROI' },
+  { key: 'showExpenses', icon: ArrowUpCircle, label: 'Sorties & dépenses',          desc: 'Frais, retraits, taxes' },
+  { key: 'showBankroll', icon: Wallet,        label: 'Bankroll',                    desc: 'Capital de départ et valeur actuelle' },
+  { key: 'showGoal',     icon: Target,        label: 'Objectif mensuel',             desc: 'Barre de progression du mois' },
+  { key: 'showCrypto',   icon: BarChart2,     label: 'Portfolio crypto',             desc: 'Adresses et valeur des wallets connectés' },
+]
+
 export default function Settings() {
   const { user, userData } = useAuth()
   const prefs        = userData?.preferences || {}
   const bankrollData = userData?.bankroll    || { amount: 0 }
   const existingToken = userData?.shareToken || null
+  const existingShareSettings = userData?.shareSettings || {
+    showStats: true, showHistory: true, showExpenses: true,
+    showBankroll: false, showGoal: false, showCrypto: false,
+  }
 
   const [currency,      setCurrency]      = useState(prefs.currency    || '€')
   const [weekStart,     setWeekStart]     = useState(prefs.weekStart   || 'monday')
@@ -26,9 +39,12 @@ export default function Settings() {
   const [saved,         setSaved]         = useState(false)
 
   // Share
-  const [shareToken,   setShareTokenState] = useState(existingToken)
-  const [shareLoading, setShareLoading]    = useState(false)
-  const [copied,       setCopied]          = useState(false)
+  const [shareToken,      setShareTokenState]  = useState(existingToken)
+  const [shareSettings,   setShareSettings]    = useState(existingShareSettings)
+  const [shareLoading,    setShareLoading]      = useState(false)
+  const [settingsSaving,  setSettingsSaving]    = useState(false)
+  const [settingsSaved,   setSettingsSaved]     = useState(false)
+  const [copied,          setCopied]            = useState(false)
 
   const shareUrl = shareToken ? `${window.location.origin}/share/${shareToken}` : null
 
@@ -51,6 +67,7 @@ export default function Settings() {
     setShareLoading(true)
     const token = generateToken()
     await setShareToken(user.uid, token)
+    await updateShareSettings(user.uid, shareSettings)
     setShareTokenState(token)
     setShareLoading(false)
   }
@@ -62,10 +79,22 @@ export default function Settings() {
     setShareLoading(false)
   }
 
+  const handleSaveShareSettings = async () => {
+    setSettingsSaving(true)
+    await updateShareSettings(user.uid, shareSettings)
+    setSettingsSaving(false)
+    setSettingsSaved(true)
+    setTimeout(() => setSettingsSaved(false), 2000)
+  }
+
   const handleCopy = () => {
     navigator.clipboard.writeText(shareUrl)
     setCopied(true)
     setTimeout(() => setCopied(false), 2000)
+  }
+
+  const toggleSetting = (key) => {
+    setShareSettings(prev => ({ ...prev, [key]: !prev[key] }))
   }
 
   const btnClass = (active) => clsx(
@@ -100,9 +129,7 @@ export default function Settings() {
 
         {/* Bankroll */}
         <Section icon={Wallet} title="Bankroll de base">
-          <p className="text-xs text-zinc-500 mb-3">
-            Ton capital de départ. Les profits s'y ajoutent automatiquement.
-          </p>
+          <p className="text-xs text-zinc-500 mb-3">Ton capital de départ. Les profits s'y ajoutent automatiquement.</p>
           <div className="relative">
             <span className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400 text-sm font-mono">{currency}</span>
             <input type="number" step="0.01" min="0" value={bankrollInput}
@@ -113,9 +140,7 @@ export default function Settings() {
 
         {/* Objectif mensuel */}
         <Section icon={Target} title="Objectif de profit mensuel">
-          <p className="text-xs text-zinc-500 mb-3">
-            Barre de progression affichée sur le dashboard ce mois-ci.
-          </p>
+          <p className="text-xs text-zinc-500 mb-3">Barre de progression affichée sur le dashboard ce mois-ci.</p>
           <div className="relative">
             <span className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400 text-sm font-mono">{currency}</span>
             <input type="number" step="0.01" min="0" value={monthlyGoal}
@@ -127,9 +152,7 @@ export default function Settings() {
 
         {/* Devise */}
         <Section icon={DollarSign} title="Devise principale">
-          <p className="text-xs text-zinc-500 mb-3">
-            Devise de stockage. Les autres devises sont disponibles en temps réel depuis le dashboard.
-          </p>
+          <p className="text-xs text-zinc-500 mb-3">Devise de stockage. Les autres devises sont disponibles en temps réel depuis le dashboard.</p>
           <div className="flex flex-wrap gap-2">
             {CURRENCIES.map(c => (
               <button key={c} onClick={() => setCurrency(c)} className={clsx(btnClass(currency === c), 'font-mono')}>{c}</button>
@@ -151,8 +174,36 @@ export default function Settings() {
         {/* Lien partageable */}
         <Section icon={Share2} title="Lien partageable">
           <p className="text-xs text-zinc-500 mb-4">
-            Génère un lien lecture seule pour partager tes stats sans donner accès à ton compte.
+            Génère un lien lecture seule. Choisis ce que tu veux partager.
           </p>
+
+          {/* Options de partage */}
+          <div className="space-y-2 mb-4">
+            {SHARE_OPTIONS.map(({ key, icon: Icon, label, desc }) => (
+              <button key={key} onClick={() => toggleSetting(key)}
+                className={clsx(
+                  'w-full flex items-center gap-3 px-4 py-3 rounded-xl border transition-all text-left',
+                  shareSettings[key]
+                    ? 'bg-brand-500/8 border-brand-500/25'
+                    : 'bg-surface-muted border-surface-border hover:border-zinc-600'
+                )}>
+                {/* Checkbox custom */}
+                <div className={clsx(
+                  'w-4 h-4 rounded border-2 flex items-center justify-center shrink-0 transition-all',
+                  shareSettings[key] ? 'bg-brand-500 border-brand-500' : 'border-zinc-600'
+                )}>
+                  {shareSettings[key] && <Check size={10} className="text-white" strokeWidth={3} />}
+                </div>
+                <Icon size={14} className={shareSettings[key] ? 'text-brand-400' : 'text-zinc-500'} />
+                <div className="flex-1 min-w-0">
+                  <p className={clsx('text-sm font-medium', shareSettings[key] ? 'text-zinc-900 dark:text-white' : 'text-zinc-500')}>{label}</p>
+                  <p className="text-xs text-zinc-600 mt-0.5">{desc}</p>
+                </div>
+              </button>
+            ))}
+          </div>
+
+          {/* Lien généré */}
           {shareToken ? (
             <div className="space-y-3">
               <div className="flex items-center gap-2">
@@ -164,18 +215,29 @@ export default function Settings() {
                   {copied ? <><Check size={12} /> Copié</> : <><Copy size={12} /> Copier</>}
                 </button>
               </div>
-              <button onClick={handleRevokeLink} disabled={shareLoading}
-                className="flex items-center gap-1.5 text-xs text-zinc-500 hover:text-red-400 transition-colors">
-                <X size={12} />Révoquer le lien
-              </button>
+              <div className="flex items-center gap-3">
+                <button onClick={handleSaveShareSettings} disabled={settingsSaving}
+                  className={clsx(
+                    'flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium transition-all',
+                    settingsSaved
+                      ? 'bg-brand-500/15 text-brand-400 border border-brand-500/20'
+                      : 'bg-surface-muted hover:bg-zinc-700 border border-surface-border text-zinc-400 hover:text-white'
+                  )}>
+                  {settingsSaved ? <><Check size={11} /> Mis à jour</> : settingsSaving ? 'Sauvegarde…' : 'Mettre à jour les permissions'}
+                </button>
+                <button onClick={handleRevokeLink} disabled={shareLoading}
+                  className="flex items-center gap-1.5 text-xs text-zinc-500 hover:text-red-400 transition-colors">
+                  <X size={12} />Révoquer
+                </button>
+              </div>
             </div>
           ) : (
             <button onClick={handleGenerateLink} disabled={shareLoading}
-              className="flex items-center gap-2 bg-surface-muted hover:bg-zinc-700 border border-surface-border rounded-xl px-4 py-2.5 text-sm font-medium text-zinc-300 transition-all">
+              className="flex items-center gap-2 bg-brand-500 hover:bg-brand-400 text-white rounded-xl px-4 py-2.5 text-sm font-semibold transition-all shadow-lg shadow-brand-500/20">
               {shareLoading
                 ? <RefreshCw size={14} className="animate-spin" />
                 : <Share2 size={14} />}
-              Générer un lien
+              Générer le lien
             </button>
           )}
         </Section>

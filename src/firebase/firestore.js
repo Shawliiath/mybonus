@@ -84,21 +84,49 @@ export async function getBankroll(userId) {
   return snap.exists() ? (snap.data().bankroll || { amount: 0 }) : { amount: 0 }
 }
 
-// ─── Share token (mode lecture seule) ────────────────────────────────────────
+// ─── Snapshot crypto (pour le lien partageable) ───────────────────────────────
+// Sauvegarde un résumé du portfolio crypto dans Firestore pour le partage
+export async function saveCryptoSnapshot(userId, snapshot) {
+  try {
+    await updateDoc(doc(db, 'users', userId), {
+      cryptoSnapshot: {
+        ...snapshot,
+        updatedAt: new Date().toISOString(),
+      }
+    })
+  } catch { /* silencieux */ }
+}
 
 export async function setShareToken(userId, token) {
   return updateDoc(doc(db, 'users', userId), { shareToken: token })
+}
+
+export async function updateShareSettings(userId, settings) {
+  return updateDoc(doc(db, 'users', userId), { shareSettings: settings })
 }
 
 export async function getUserByShareToken(token) {
   const snap = await getDocs(query(collection(db, 'users'), where('shareToken', '==', token)))
   if (snap.empty) return null
   const userDoc = snap.docs[0]
-  const entries  = await getDocs(query(collection(db, 'users', userDoc.id, 'entries'), orderBy('weekStart', 'desc')))
-  const expenses = await getDocs(query(collection(db, 'users', userDoc.id, 'expenses'), orderBy('date', 'desc')))
+  const userData = userDoc.data()
+  const settings = userData.shareSettings || {
+    showStats: true, showHistory: true, showExpenses: true,
+    showBankroll: false, showGoal: false, showCrypto: false,
+  }
+
+  const entries  = settings.showHistory || settings.showStats
+    ? await getDocs(query(collection(db, 'users', userDoc.id, 'entries'), orderBy('weekStart', 'desc')))
+    : { docs: [] }
+  const expenses = settings.showExpenses
+    ? await getDocs(query(collection(db, 'users', userDoc.id, 'expenses'), orderBy('date', 'desc')))
+    : { docs: [] }
+
   return {
-    user:     userDoc.data(),
-    entries:  entries.docs.map(d  => ({ id: d.id,  ...d.data()  })),
-    expenses: expenses.docs.map(d => ({ id: d.id,  ...d.data()  })),
+    user:          userData,
+    settings,
+    cryptoSnapshot: settings.showCrypto ? (userData.cryptoSnapshot ?? null) : null,
+    entries:       entries.docs.map(d => ({ id: d.id, ...d.data() })),
+    expenses:      expenses.docs.map(d => ({ id: d.id, ...d.data() })),
   }
 }

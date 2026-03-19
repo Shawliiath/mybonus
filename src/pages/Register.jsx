@@ -1,7 +1,33 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { registerWithEmail, loginWithGoogle } from '../firebase/auth'
-import { TrendingUp, Mail, Lock, User } from 'lucide-react'
+import { Mail, Lock, User } from 'lucide-react'
+
+
+function AppLogo({ size = 32 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg" style={{borderRadius: size * 0.18 + 'px'}}>
+      <defs>
+        <linearGradient id="lb" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stopColor="#060a12"/><stop offset="100%" stopColor="#0e1828"/></linearGradient>
+        <linearGradient id="lu" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#4ade80"/><stop offset="100%" stopColor="#15803d"/></linearGradient>
+        <linearGradient id="ld" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#fb7185"/><stop offset="100%" stopColor="#be123c"/></linearGradient>
+        <linearGradient id="la" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#22c55e" stopOpacity="0.25"/><stop offset="100%" stopColor="#22c55e" stopOpacity="0"/></linearGradient>
+      </defs>
+      <rect width="512" height="512" fill="url(#lb)"/>
+      <path d="M34,365 L68,329 L135,276 L202,268 L269,238 L336,183 L403,160 L465,101 L479,88 L479,415 L34,415 Z" fill="url(#la)"/>
+      <path d="M34,365 L68,329 L135,276 L202,268 L269,238 L336,183 L403,160 L465,101 L479,88" fill="none" stroke="#22c55e" strokeWidth="18" strokeLinecap="round" strokeLinejoin="round" opacity="0.55"/>
+      <line x1="68" y1="300" x2="68" y2="390" stroke="#fb7185" strokeWidth="14"/><rect x="54" y="310" width="28" height="38" rx="3" fill="url(#ld)"/>
+      <line x1="135" y1="265" x2="135" y2="380" stroke="#4ade80" strokeWidth="14"/><rect x="121" y="272" width="28" height="92" rx="3" fill="url(#lu)"/>
+      <line x1="202" y1="248" x2="202" y2="318" stroke="#fb7185" strokeWidth="14"/><rect x="188" y="255" width="28" height="26" rx="3" fill="url(#ld)"/>
+      <line x1="269" y1="178" x2="269" y2="305" stroke="#4ade80" strokeWidth="14"/><rect x="255" y="186" width="28" height="104" rx="3" fill="url(#lu)"/>
+      <line x1="336" y1="148" x2="336" y2="248" stroke="#fb7185" strokeWidth="14"/><rect x="322" y="158" width="28" height="52" rx="3" fill="url(#ld)"/>
+      <line x1="403" y1="112" x2="403" y2="218" stroke="#4ade80" strokeWidth="14"/><rect x="389" y="120" width="28" height="80" rx="3" fill="url(#lu)"/>
+      <line x1="465" y1="72" x2="465" y2="148" stroke="#4ade80" strokeWidth="14"/><rect x="451" y="80" width="28" height="42" rx="3" fill="url(#lu)"/>
+      <circle cx="256" cy="462" r="42" fill="#22c55e" fillOpacity="0.08" stroke="#22c55e" strokeWidth="10" strokeOpacity="0.4"/>
+      <text x="256" y="478" textAnchor="middle" fontFamily="Georgia, serif" fontSize="54" fontWeight="700" fill="#22c55e" fillOpacity="0.95">&#x20BF;</text>
+    </svg>
+  )
+}
 
 export default function Register() {
   const navigate = useNavigate()
@@ -39,9 +65,7 @@ export default function Register() {
 
         {/* Logo */}
         <div className="flex flex-col items-center gap-3 mb-8">
-          <div className="w-14 h-14 bg-brand-500 rounded-2xl flex items-center justify-center shadow-xl shadow-brand-500/30">
-            <TrendingUp size={26} className="text-white" strokeWidth={2.5} />
-          </div>
+          <AppLogo size={56} />
           <div className="text-center">
             <h1 className="text-2xl font-bold tracking-tight text-white">MyBonus</h1>
             <p className="text-zinc-500 text-sm mt-0.5">Crée ton compte gratuitement</p>

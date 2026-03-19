@@ -3,22 +3,35 @@
   "short_name": "MyBonus",
   "description": "Suivi de performance betting — bankroll, profits, analytics",
   "start_url": "/",
+  "scope": "/",
   "display": "standalone",
-  "background_color": "#0f1117",
+  "background_color": "#080c14",
   "theme_color": "#22c55e",
   "orientation": "portrait-primary",
   "icons": [
     {
-      "src": "/icon-192.png",
+      "src": "/icon-192-v2.png",
       "sizes": "192x192",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
     },
     {
-      "src": "/icon-512.png",
+      "src": "/icon-192-v2.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/icon-512-v2.png",
       "sizes": "512x512",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-512-v2.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
     },
     {
       "src": "/icon-512.svg",

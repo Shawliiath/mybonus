@@ -58,7 +58,7 @@ export default function BankrollCard({ bankroll, netProfit, currency, onUpdate, 
       {loading ? (
         <div className="h-8 w-32 bg-surface-muted rounded-lg animate-pulse" />
       ) : (
-        <p className={clsx('text-3xl font-bold font-mono tracking-tight mb-1', isPositive ? 'text-white' : 'text-red-400')}>
+        <p className={clsx('text-2xl sm:text-3xl font-bold font-mono tracking-tight mb-1 whitespace-nowrap', isPositive ? 'text-white' : 'text-red-400')}>
           {fmtNoSign(bankrollTotal, currency)}
         </p>
       )}
