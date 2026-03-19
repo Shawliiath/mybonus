@@ -47,13 +47,13 @@ function encodeBalanceOf(addr) {
 
 // ─── Tokens connus ────────────────────────────────────────────────────────────
 const KNOWN_TOKENS = [
-  { contractAddress: '0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48', symbol: 'USDC', name: 'USD Coin',       decimals: 6,  cgId: 'usd-coin' },
-  { contractAddress: '0xdac17f958d2ee523a2206206994597c13d831ec7', symbol: 'USDT', name: 'Tether USD',     decimals: 6,  cgId: 'tether' },
-  { contractAddress: '0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2', symbol: 'WETH', name: 'Wrapped Ether',  decimals: 18, cgId: 'weth' },
-  { contractAddress: '0x2260fac5e5542a773aa44fbcfedf7c193bc2c599', symbol: 'WBTC', name: 'Wrapped Bitcoin', decimals: 8,  cgId: 'wrapped-bitcoin' },
-  { contractAddress: '0x6b175474e89094c44da98b954eedeac495271d0f', symbol: 'DAI',  name: 'Dai Stablecoin', decimals: 18, cgId: 'dai' },
-  { contractAddress: '0x1f9840a85d5af5bf1d1762f925bdaddc4201f984', symbol: 'UNI',  name: 'Uniswap',        decimals: 18, cgId: 'uniswap' },
-  { contractAddress: '0x514910771af9ca656af840dff83e8264ecf986ca', symbol: 'LINK', name: 'Chainlink',       decimals: 18, cgId: 'chainlink' },
+  { contractAddress: '0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48', symbol: 'USDC', name: 'USDC',       decimals: 6,  cgId: 'usd-coin' },
+  { contractAddress: '0xdac17f958d2ee523a2206206994597c13d831ec7', symbol: 'USDT', name: 'USDT',     decimals: 6,  cgId: 'tether' },
+  { contractAddress: '0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2', symbol: 'WETH', name: 'WETH',  decimals: 18, cgId: 'weth' },
+  { contractAddress: '0x2260fac5e5542a773aa44fbcfedf7c193bc2c599', symbol: 'WBTC', name: 'WBTC', decimals: 8,  cgId: 'wrapped-bitcoin' },
+  { contractAddress: '0x6b175474e89094c44da98b954eedeac495271d0f', symbol: 'DAI',  name: 'DAI', decimals: 18, cgId: 'dai' },
+  { contractAddress: '0x1f9840a85d5af5bf1d1762f925bdaddc4201f984', symbol: 'UNI',  name: 'UNI',        decimals: 18, cgId: 'uniswap' },
+  { contractAddress: '0x514910771af9ca656af840dff83e8264ecf986ca', symbol: 'LINK', name: 'LINK',       decimals: 18, cgId: 'chainlink' },
 ]
 
 // ─── Prix via plusieurs sources en cascade ────────────────────────────────────

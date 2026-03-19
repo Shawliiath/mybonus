@@ -63,17 +63,17 @@ async function fetchSolPrice() {
 // ─── Tokens SPL connus ────────────────────────────────────────────────────────
 // stableFallback: prix EUR fixe si CoinGecko fail (stablecoins = ~1 USD = ~0.92 EUR)
 const KNOWN_SPL = {
-  'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v': { symbol: 'USDC', name: 'USD Coin',        decimals: 6, cgId: 'usd-coin',  stableFallback: 0.93 },
-  'Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB': { symbol: 'USDT', name: 'Tether USD',       decimals: 6, cgId: 'tether',    stableFallback: 0.93 },
-  'So11111111111111111111111111111111111111112':    { symbol: 'wSOL', name: 'Wrapped SOL',      decimals: 9, cgId: 'solana' },
-  'mSoLzYCxHdYgdzU16g5QSh3i5K3z3KZK7ytfqcJm7So': { symbol: 'mSOL', name: 'Marinade SOL',     decimals: 9, cgId: 'msol' },
-  'DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263': { symbol: 'BONK', name: 'Bonk',             decimals: 5, cgId: 'bonk' },
-  'JUPyiwrYJFskUPiHa7hkeR8VUtAeFoSYbKedZNsDvCN':  { symbol: 'JUP',  name: 'Jupiter',          decimals: 6, cgId: 'jupiter-exchange-solana' },
-  'EKpQGSJtjMFqKZ9KQanSqYXRcF8fBopzLHYxdM65zcjm': { symbol: 'WIF',  name: 'dogwifhat',        decimals: 6, cgId: 'dogwifcoin' },
-  'orcaEKTdK7LKz57vaAYr9QeNsVEPfiu6QeMU1kektZE':  { symbol: 'ORCA', name: 'Orca',             decimals: 6, cgId: 'orca' },
-  'rndrizKT3MK1iimdxRdWabcF7Zg7AR5T4nud4EkHBof':  { symbol: 'RNDR', name: 'Render',           decimals: 8, cgId: 'render-token' },
-  'hntyVP6YFm1Hg25TN9WGLqM12b8TQmcknKrdu1oxWux':  { symbol: 'HNT',  name: 'Helium',           decimals: 8, cgId: 'helium' },
-  '7vfCXTUXx5WJV5JADk17DUJ4ksgau7utNKj4b963voxs': { symbol: 'ETH',  name: 'Ether (Wormhole)', decimals: 8, cgId: 'ethereum' },
+  'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v': { symbol: 'USDC', name: 'USDC',        decimals: 6, cgId: 'usd-coin',  stableFallback: 0.93 },
+  'Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB': { symbol: 'USDT', name: 'USDT',       decimals: 6, cgId: 'tether',    stableFallback: 0.93 },
+  'So11111111111111111111111111111111111111112':    { symbol: 'wSOL', name: 'wSOL',      decimals: 9, cgId: 'solana' },
+  'mSoLzYCxHdYgdzU16g5QSh3i5K3z3KZK7ytfqcJm7So': { symbol: 'mSOL', name: 'mSOL',     decimals: 9, cgId: 'msol' },
+  'DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263': { symbol: 'BONK', name: 'BONK',             decimals: 5, cgId: 'bonk' },
+  'JUPyiwrYJFskUPiHa7hkeR8VUtAeFoSYbKedZNsDvCN':  { symbol: 'JUP',  name: 'JUP',          decimals: 6, cgId: 'jupiter-exchange-solana' },
+  'EKpQGSJtjMFqKZ9KQanSqYXRcF8fBopzLHYxdM65zcjm': { symbol: 'WIF',  name: 'WIF',        decimals: 6, cgId: 'dogwifcoin' },
+  'orcaEKTdK7LKz57vaAYr9QeNsVEPfiu6QeMU1kektZE':  { symbol: 'ORCA', name: 'ORCA',             decimals: 6, cgId: 'orca' },
+  'rndrizKT3MK1iimdxRdWabcF7Zg7AR5T4nud4EkHBof':  { symbol: 'RNDR', name: 'RNDR',           decimals: 8, cgId: 'render-token' },
+  'hntyVP6YFm1Hg25TN9WGLqM12b8TQmcknKrdu1oxWux':  { symbol: 'HNT',  name: 'HNT',           decimals: 8, cgId: 'helium' },
+  '7vfCXTUXx5WJV5JADk17DUJ4ksgau7utNKj4b963voxs': { symbol: 'ETH',  name: 'ETH', decimals: 8, cgId: 'ethereum' },
 }
 
 async function fetchSplPrices(mints) {
@@ -205,7 +205,7 @@ async function fetchSolanaPortfolio(addr) {
       splTokens.push({
         mint,
         symbol:   meta?.symbol  ?? mint.slice(0, 5) + '…',
-        name:     meta?.name    ?? 'SPL Token',
+        name:     meta?.symbol ?? meta?.name ?? mint.slice(0,6),
         decimals: ta?.decimals  ?? meta?.decimals ?? 0,
         balance:  amount,
         valueEur: price ? amount * price.eur : null,

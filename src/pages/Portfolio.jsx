@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback, useEffect, useRef } from 'react'
+import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react'
 import { Link } from 'react-router-dom'
 import AppLayout from '../components/layout/AppLayout'
 import { useWalletContext } from '../context/WalletContext'
@@ -88,34 +88,105 @@ function tokenStyle(sym) {
   return TOKEN_COLORS[sym] ?? { bg: 'bg-zinc-500/15', text: 'text-zinc-300', border: 'border-zinc-500/20' }
 }
 
+
+// ─── Token logo URLs ──────────────────────────────────────────────────────────
+const TOKEN_LOGOS = {
+  ETH:  'https://assets.coingecko.com/coins/images/279/small/ethereum.png',
+  BTC:  'https://assets.coingecko.com/coins/images/1/small/bitcoin.png',
+  SOL:  'https://assets.coingecko.com/coins/images/4128/small/solana.png',
+  USDC: 'https://assets.coingecko.com/coins/images/6319/small/usdc.png',
+  USDT: 'https://assets.coingecko.com/coins/images/325/small/tether.png',
+  DAI:  'https://assets.coingecko.com/coins/images/9956/small/Badge_Dai.png',
+  WBTC: 'https://assets.coingecko.com/coins/images/7598/small/wrapped_bitcoin_wbtc.png',
+  WETH: 'https://assets.coingecko.com/coins/images/2518/small/weth.png',
+  BONK: 'https://assets.coingecko.com/coins/images/28600/small/bonk.jpg',
+  JUP:  'https://assets.coingecko.com/coins/images/34188/small/jup.png',
+  WIF:  'https://assets.coingecko.com/coins/images/33566/small/wif.png',
+  ORCA: 'https://assets.coingecko.com/coins/images/17547/small/Orca_Logo.png',
+  LINK: 'https://assets.coingecko.com/coins/images/877/small/chainlink-new-logo.png',
+  UNI:  'https://assets.coingecko.com/coins/images/12504/small/uni.jpg',
+  RNDR: 'https://assets.coingecko.com/coins/images/11636/small/rndr.png',
+  HNT:  'https://assets.coingecko.com/coins/images/4284/small/Helium_HNT.png',
+}
+
+const CHAIN_LOGOS = {
+  eth: 'https://assets.coingecko.com/coins/images/279/small/ethereum.png',
+  sol: 'https://assets.coingecko.com/coins/images/4128/small/solana.png',
+  btc: 'https://assets.coingecko.com/coins/images/1/small/bitcoin.png',
+}
+
+const CHAIN_LABELS = {
+  eth: 'Ethereum',
+  sol: 'Solana',
+  btc: 'Bitcoin',
+}
+
+const CHAIN_BADGE_BG = {
+  eth: '#ffffff',
+  sol: '#000000',
+  btc: '#f7931a',
+}
+
+function TokenLogo({ symbol, chain, size = 44 }) {
+  const [imgError, setImgError] = React.useState(false)
+  const url = TOKEN_LOGOS[symbol.toUpperCase()]
+  const style = tokenStyle(symbol)
+  const chainIcon = chain === 'sol' ? '◎' : chain === 'btc' ? '₿' : 'Ξ'
+  const chainColor = chain === 'sol' ? '#a855f7' : chain === 'btc' ? '#f59e0b' : '#3b82f6'
+
+  if (url && !imgError) {
+    return (
+      <div className="relative shrink-0" style={{ width: size, height: size }}>
+        <img
+          src={url}
+          alt={symbol}
+          onError={() => setImgError(true)}
+          className="w-full h-full rounded-2xl object-cover"
+          loading="lazy"
+        />
+        {/* Chain badge — vrai logo réseau */}
+        <div className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full border-2 border-surface-card flex items-center justify-center overflow-hidden"
+          style={{ background: CHAIN_BADGE_BG[chain] ?? '#1a1f2e' }}>
+          <img src={CHAIN_LOGOS[chain]} alt={chain} className="w-3.5 h-3.5 object-contain" />
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="relative shrink-0" style={{ width: size, height: size }}>
+      <div className={clsx('w-full h-full rounded-2xl flex items-center justify-center font-bold text-sm border', style.bg, style.text, style.border)}>
+        {symbol.slice(0, 3)}
+      </div>
+      <div className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full border-2 border-surface-card flex items-center justify-center overflow-hidden"
+        style={{ background: CHAIN_BADGE_BG[chain] ?? '#1a1f2e' }}>
+        <img src={CHAIN_LOGOS[chain]} alt={chain} className="w-3.5 h-3.5 object-contain" />
+      </div>
+    </div>
+  )
+}
+
 // ─── Token Row ────────────────────────────────────────────────────────────────
 function TokenRow({ symbol, name, balance, valueEur, chain, change24h, allTotal, onClick }) {
-  const style      = tokenStyle(symbol)
-  const isUp       = (change24h ?? 0) >= 0
-  const weight     = allTotal > 0 && valueEur ? (valueEur / allTotal) * 100 : 0
-  const chainLabel = chain === 'sol' ? '◎' : chain === 'btc' ? '₿' : 'Ξ'
-  const chainColor = chain === 'sol' ? 'text-purple-400' : chain === 'btc' ? 'text-amber-400' : 'text-blue-400'
+  const style  = tokenStyle(symbol)
+  const isUp   = (change24h ?? 0) >= 0
+  const weight = allTotal > 0 && valueEur ? (valueEur / allTotal) * 100 : 0
 
   return (
     <button onClick={onClick} className="w-full flex items-center gap-4 px-5 py-4 hover:bg-surface-muted/30 transition-colors text-left group">
-      <div className={clsx('w-11 h-11 rounded-2xl flex items-center justify-center shrink-0 font-bold text-sm border', style.bg, style.text, style.border)}>
-        {symbol.slice(0, 3)}
-      </div>
+      <TokenLogo symbol={symbol} chain={chain} size={44} />
       <div className="flex-1 min-w-0 overflow-hidden">
-        <div className="flex items-center gap-1.5 mb-0.5">
+        <div className="flex items-center gap-2 mb-0.5">
           <p className="text-sm font-semibold text-zinc-900 dark:text-white truncate">{name}</p>
-          <span className={clsx('text-xs font-bold shrink-0', chainColor)}>{chainLabel}</span>
+          <span className="text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-zinc-500/15 text-zinc-400 shrink-0">
+            {CHAIN_LABELS[chain] ?? chain}
+          </span>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
-          <p className="text-xs text-zinc-500 font-mono truncate">{fmtCrypto(balance)} {symbol}</p>
-          {weight > 0 && (
-            <div className="flex items-center gap-1.5 shrink-0">
-              <div className="w-12 h-1 bg-surface-muted rounded-full overflow-hidden">
-                <div className="h-full rounded-full bg-brand-500/60" style={{ width: `${Math.min(weight, 100)}%` }} />
-              </div>
-              <span className="text-xs text-zinc-500 dark:text-zinc-600">{weight.toFixed(1)}%</span>
-            </div>
-          )}
+          <p className="text-xs text-zinc-500 font-mono truncate">
+            {valueEur != null && balance > 0 ? fmtEur(valueEur / balance) + ' · ' : ''}{fmtCrypto(balance)} {symbol}
+          </p>
+
         </div>
       </div>
       <div className="text-right shrink-0">
@@ -546,12 +617,7 @@ function ConnectScreen({ onConnectWallet, onConnectManual, onConnectSolana, onCo
             </span>
           </div>
 
-          <div className="bg-amber-500/5 border border-amber-500/15 rounded-xl px-3 py-2.5 mb-3 flex items-start gap-2">
-            <AlertCircle size={13} className="text-amber-400/70 mt-0.5 shrink-0" />
-            <p className="text-xs text-zinc-500 leading-relaxed">
-              Aucun wallet populaire ne supporte BTC via WalletConnect pour l'instant. Entre ton adresse publique pour suivre ton solde en lecture seule — comme Zapper ou DeBank le font.
-            </p>
-          </div>
+          <p className="text-xs text-zinc-500 mb-3">Entre ton adresse publique pour suivre ton solde.</p>
 
           <form onSubmit={handleBtc} className="flex gap-2">
             <input type="text" value={btcInput}
@@ -623,6 +689,47 @@ function usePullToRefresh(onRefresh) {
 }
 
 // ─── Page principale ──────────────────────────────────────────────────────────
+
+function BtcQuickAdd({ onConnect }) {
+  const [open, setOpen] = React.useState(false)
+  const [val,  setVal]  = React.useState('')
+  const [err,  setErr]  = React.useState('')
+
+  const handleSubmit = (e) => {
+    e.preventDefault()
+    const addr = val.trim()
+    if (!isValidBtcAddress(addr)) { setErr('Adresse invalide'); return }
+    onConnect(addr)
+    setOpen(false)
+    setVal('')
+    setErr('')
+  }
+
+  if (!open) return (
+    <button onClick={() => setOpen(true)}
+      className="flex items-center gap-1.5 bg-amber-500/8 hover:bg-amber-500/15 border border-amber-500/20 rounded-full px-3 py-1.5 text-xs text-amber-400 transition-all">
+      <span className="font-bold">₿</span>
+      Ajouter BTC
+    </button>
+  )
+
+  return (
+    <form onSubmit={handleSubmit} className="flex items-center gap-1.5">
+      <input
+        autoFocus
+        type="text"
+        value={val}
+        onChange={e => { setVal(e.target.value); setErr('') }}
+        placeholder="bc1q... / 1... / 3..."
+        className="bg-surface-muted border border-amber-500/30 rounded-full px-3 py-1.5 text-xs font-mono text-zinc-900 dark:text-white placeholder:text-zinc-500 focus:outline-none focus:border-amber-500/60 w-48 transition-all"
+      />
+      <button type="submit" className="px-3 py-1.5 bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/25 rounded-full text-xs text-amber-400 font-semibold transition-all">OK</button>
+      <button type="button" onClick={() => { setOpen(false); setErr('') }} className="text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-300 transition-colors"><X size={13} /></button>
+      {err && <span className="text-xs text-red-400">{err}</span>}
+    </form>
+  )
+}
+
 export default function Portfolio() {
   const { eth, solana, bitcoin } = useWalletContext()
   const { address, isConnected, walletData, loading, error, connectWallet, connectManual, disconnect, refresh } = eth
@@ -734,7 +841,7 @@ export default function Portfolio() {
           onConnectWallet={connectWallet}
           onConnectManual={connectManual}
           onConnectSolana={solConnectManual}
-          onConnectBitcoin={btcConnectWallet}
+          onConnectBitcoin={btcConnectManual}
           error={error} solError={solError} btcError={btcError}
         />
       </AppLayout>
@@ -804,7 +911,7 @@ export default function Portfolio() {
                 </a>
               </div>
             )}
-            {btcAddress && (
+            {btcAddress ? (
               <div className="flex items-center gap-1.5 bg-surface-card border border-amber-500/20 rounded-full px-3 py-1.5">
                 <span className="text-xs text-amber-400 font-bold">₿</span>
                 <span className="text-xs text-zinc-500 font-mono">{btcAddress.slice(0,6)}…{btcAddress.slice(-4)}</span>
@@ -815,6 +922,8 @@ export default function Portfolio() {
                   <X size={10} />
                 </button>
               </div>
+            ) : (
+              <BtcQuickAdd onConnect={btcConnectManual} />
             )}
             <button onClick={handleRefresh} disabled={loading || solLoading || btcLoading}
               className="flex items-center gap-1.5 bg-surface-card hover:bg-surface-muted border border-surface-border rounded-full px-3 py-1.5 text-xs text-zinc-500 hover:text-zinc-900 dark:hover:text-white transition-all">
