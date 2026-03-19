@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useCallback, useRef, memo } from 'react'
 import AppLayout from '../components/layout/AppLayout'
 import { Search, RefreshCw, BarChart3 } from 'lucide-react'
 import clsx from 'clsx'
@@ -21,9 +21,68 @@ const COINS_LIST = [
   'dogecoin','litecoin','polygon','the-open-network','near',
 ]
 
-const LIVE_INTERVAL   = 2000
-const MARKET_INTERVAL = 60000
+// Intervalles larges — fluide sans spam
+const LIVE_INTERVAL   = 90_000       // prix live toutes les 90s
+const MARKET_INTERVAL = 5 * 60_000   // marché toutes les 5 min
+const CHART_TTL       = 10 * 60_000  // cache graphique 10 min
 const PULL_THRESHOLD  = 70
+
+// ── API — état global pour éviter les requêtes concurrentes ──────────────────
+
+let _backoffUntil   = 0
+let _inflightMarket = null
+
+const CG_KEY     = import.meta.env.VITE_COINGECKO_KEY ?? ''
+const CG_HEADERS = CG_KEY ? { 'x-cg-demo-api-key': CG_KEY } : {}
+
+async function cgFetch(url) {
+  if (Date.now() < _backoffUntil) throw new Error('backoff')
+  const res = await fetch(url, { headers: CG_HEADERS, signal: AbortSignal.timeout(8000) })
+  if (res.status === 429) {
+    _backoffUntil = Date.now() + 60_000
+    throw new Error('rate-limit')
+  }
+  if (!res.ok) throw new Error(`api-error ${res.status}`)
+  return res.json()
+}
+
+async function fetchMarkets() {
+  if (_inflightMarket) return _inflightMarket
+  const ids = COINS_LIST.join(',')
+  _inflightMarket = cgFetch(
+    `https://api.coingecko.com/api/v3/coins/markets?vs_currency=eur&ids=${ids}&order=market_cap_desc&per_page=15&page=1&sparkline=true&price_change_percentage=1h,24h,7d,30d`
+  ).finally(() => { _inflightMarket = null })
+  return _inflightMarket
+}
+
+async function fetchLivePrice(coinId) {
+  const data = await cgFetch(`https://api.coingecko.com/api/v3/simple/price?ids=${coinId}&vs_currencies=eur`)
+  return data[coinId]?.eur ?? null
+}
+
+// ── Cache graphique global — clé par (coinId + filterId) ─────────────────────
+// Séparé du state React pour ne PAS déclencher de re-render sur les CoinRow
+const _chartCache = {}
+
+async function fetchChart(coinId, days, minutesBack = null) {
+  const key   = `${coinId}-${days}-${minutesBack}`
+  const entry = _chartCache[key]
+  if (entry && Date.now() - entry.ts < CHART_TTL) return entry.data
+  if (Date.now() < _backoffUntil) return entry?.data ?? []
+
+  const data = await cgFetch(
+    `https://api.coingecko.com/api/v3/coins/${coinId}/market_chart?vs_currency=eur&days=${days}`
+  )
+  let pts = data.prices.map(([ts, price]) => ({ ts, price }))
+  if (minutesBack != null) {
+    const cutoff = Date.now() - minutesBack * 60 * 1000
+    pts = pts.filter(p => p.ts >= cutoff)
+  }
+  const step   = Math.max(1, Math.floor(pts.length / 120))
+  const result = pts.filter((_, i) => i % step === 0)
+  _chartCache[key] = { data: result, ts: Date.now() }
+  return result
+}
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -40,8 +99,8 @@ function fmtPct(v) {
 function fmtMcap(v) {
   if (!v) return '—'
   if (v >= 1e12) return (v / 1e12).toFixed(2) + 'T €'
-  if (v >= 1e9)  return (v / 1e9).toFixed(2) + 'B €'
-  if (v >= 1e6)  return (v / 1e6).toFixed(1) + 'M €'
+  if (v >= 1e9)  return (v / 1e9).toFixed(2)  + 'B €'
+  if (v >= 1e6)  return (v / 1e6).toFixed(1)  + 'M €'
   return v.toLocaleString('fr-FR') + ' €'
 }
 function fmtChartDate(ts, filter) {
@@ -51,48 +110,7 @@ function fmtChartDate(ts, filter) {
   return d.toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' })
 }
 
-// ── API ───────────────────────────────────────────────────────────────────────
-
-// ── CoinGecko API key + helpers ───────────────────────────────────────────────
-const CG_KEY = import.meta.env.VITE_COINGECKO_KEY ?? ''
-const CG_HEADERS = CG_KEY ? { 'x-cg-demo-api-key': CG_KEY } : {}
-
-// Backoff state pour éviter de spammer sur 429
-let _backoffUntil = 0
-async function cgFetch(url) {
-  if (Date.now() < _backoffUntil) throw new Error('backoff')
-  const res = await fetch(url, { headers: CG_HEADERS })
-  if (res.status === 429) {
-    _backoffUntil = Date.now() + 15000 // pause 15s si rate-limited
-    throw new Error('rate-limit')
-  }
-  if (!res.ok) throw new Error('api-error')
-  return res.json()
-}
-
-async function fetchMarkets() {
-  const ids = COINS_LIST.join(',')
-  return cgFetch(`https://api.coingecko.com/api/v3/coins/markets?vs_currency=eur&ids=${ids}&order=market_cap_desc&per_page=15&page=1&sparkline=false&price_change_percentage=1h,24h,7d,30d`)
-}
-
-async function fetchLivePrice(coinId) {
-  const data = await cgFetch(`https://api.coingecko.com/api/v3/simple/price?ids=${coinId}&vs_currencies=eur`)
-  return data[coinId]?.eur ?? null
-}
-
-async function fetchChart(coinId, days, minutesBack = null) {
-  const data = await cgFetch(`https://api.coingecko.com/api/v3/coins/${coinId}/market_chart?vs_currency=eur&days=${days}`)
-  let pts = data.prices.map(([ts, price]) => ({ ts, price }))
-  // Pour 1h : garder uniquement les 60 dernières minutes
-  if (minutesBack != null) {
-    const cutoff = Date.now() - minutesBack * 60 * 1000
-    pts = pts.filter(p => p.ts >= cutoff)
-  }
-  const step = Math.max(1, Math.floor(pts.length / 120))
-  return pts.filter((_, i) => i % step === 0)
-}
-
-// ── Pull-to-refresh hook ──────────────────────────────────────────────────────
+// ── Pull-to-refresh ───────────────────────────────────────────────────────────
 
 function usePullToRefresh(onRefresh) {
   const [pullY,      setPullY]      = useState(0)
@@ -103,16 +121,13 @@ function usePullToRefresh(onRefresh) {
   useEffect(() => {
     const onTouchStart = (e) => {
       if (window.scrollY > 0) return
-      startY.current = e.touches[0].clientY
+      startY.current  = e.touches[0].clientY
       pulling.current = true
     }
     const onTouchMove = (e) => {
       if (!pulling.current || startY.current == null) return
       const delta = e.touches[0].clientY - startY.current
-      if (delta > 0) {
-        e.preventDefault()
-        setPullY(Math.min(delta * 0.5, PULL_THRESHOLD + 20))
-      }
+      if (delta > 0) { e.preventDefault(); setPullY(Math.min(delta * 0.5, PULL_THRESHOLD + 20)) }
     }
     const onTouchEnd = async () => {
       if (!pulling.current) return
@@ -151,16 +166,15 @@ function LiveDot() {
   )
 }
 
-// ── Sparkline ─────────────────────────────────────────────────────────────────
+// ── Sparkline — memo pour éviter les re-renders inutiles ──────────────────────
 
-function Sparkline({ data, isUp }) {
+const Sparkline = memo(function Sparkline({ data, isUp }) {
   if (!data || data.length < 2) return <div className="w-20 h-8" />
-  const prices = data.map(d => d.price)
-  const min = Math.min(...prices), max = Math.max(...prices)
+  const min = Math.min(...data), max = Math.max(...data)
   const range = max - min || 1
   const W = 80, H = 32
-  const pts = prices.map((p, i) => {
-    const x = (i / (prices.length - 1)) * W
+  const pts = data.map((p, i) => {
+    const x = (i / (data.length - 1)) * W
     const y = H - ((p - min) / range) * H
     return `${x},${y}`
   }).join(' ')
@@ -170,18 +184,20 @@ function Sparkline({ data, isUp }) {
         stroke={isUp ? '#22c55e' : '#ef4444'} strokeWidth="1.5" strokeLinejoin="round" />
     </svg>
   )
-}
+})
 
-// ── CoinRow ───────────────────────────────────────────────────────────────────
+// ── CoinRow — memo + listFilter SÉPARÉ du chartFilter ────────────────────────
+// listFilter : contrôle la variation % affichée dans la liste (ne touche PAS au graphique)
 
-function CoinRow({ coin, timeFilter, livePrice, onClick, isSelected }) {
-  const pctKey = timeFilter === '1h'  ? 'price_change_percentage_1h_in_currency'
-               : timeFilter === '24h' ? 'price_change_percentage_24h_in_currency'
-               : timeFilter === '7d'  ? 'price_change_percentage_7d_in_currency'
+const CoinRow = memo(function CoinRow({ coin, listFilter, livePrice, onClick, isSelected }) {
+  const pctKey = listFilter === '1h'  ? 'price_change_percentage_1h_in_currency'
+               : listFilter === '24h' ? 'price_change_percentage_24h_in_currency'
+               : listFilter === '7d'  ? 'price_change_percentage_7d_in_currency'
                : 'price_change_percentage_30d_in_currency'
-  const pct   = coin[pctKey]
-  const isUp  = (pct ?? 0) >= 0
-  const price = isSelected && livePrice != null ? livePrice : coin.current_price
+  const pct        = coin[pctKey]
+  const isUp       = (pct ?? 0) >= 0
+  const price      = isSelected && livePrice != null ? livePrice : coin.current_price
+  const sparkData  = coin.sparkline_in_7d?.price ?? []
 
   return (
     <button onClick={() => onClick(coin)}
@@ -198,7 +214,7 @@ function CoinRow({ coin, timeFilter, livePrice, onClick, isSelected }) {
         <p className="text-xs text-zinc-500 font-mono uppercase">{coin.symbol}</p>
       </div>
       <div className="hidden sm:block shrink-0">
-        <Sparkline data={coin._sparkline} isUp={isUp} />
+        <Sparkline data={sparkData.slice(-48)} isUp={isUp} />
       </div>
       <div className="text-right shrink-0 w-20">
         <p className={clsx('text-xs font-mono font-semibold', isUp ? 'text-emerald-400' : 'text-red-400')}>
@@ -214,7 +230,7 @@ function CoinRow({ coin, timeFilter, livePrice, onClick, isSelected }) {
       </div>
     </button>
   )
-}
+})
 
 // ── ChartTooltip ──────────────────────────────────────────────────────────────
 
@@ -235,39 +251,38 @@ export default function Market() {
   const [loading,      setLoading]      = useState(true)
   const [error,        setError]        = useState(null)
   const [search,       setSearch]       = useState('')
-  const [timeFilter,   setTimeFilter]   = useState('24h')
+
+  // ── DEUX filtres INDÉPENDANTS ─────────────────────────────────────────────
+  // listFilter  : variation % dans la liste des coins (ne déclenche PAS de fetch graphique)
+  // chartFilter : période du graphique détail (ne re-render PAS la liste)
+  const [listFilter,   setListFilter]   = useState('24h')
+  const [chartFilter,  setChartFilter]  = useState('24h')
+
   const [selectedCoin, setSelectedCoin] = useState(null)
   const [chartData,    setChartData]    = useState([])
   const [chartLoading, setChartLoading] = useState(false)
   const [livePrice,    setLivePrice]    = useState(null)
   const [liveFlash,    setLiveFlash]    = useState(null)
   const [lastUpdated,  setLastUpdated]  = useState(null)
+  const [mktRefreshing, setMktRefreshing] = useState(false)
 
-  const chartCache   = useRef({})
   const liveTimerRef = useRef(null)
   const mktTimerRef  = useRef(null)
 
   // ── Load market list ────────────────────────────────────────────────────────
-  const [mktRefreshing, setMktRefreshing] = useState(false)
-
   const loadMarkets = useCallback(async (silent = false) => {
     if (!silent) { setLoading(true); setError(null) }
     else setMktRefreshing(true)
     try {
       const data = await fetchMarkets()
-      setCoins(prev => {
-        const sparklines = {}
-        prev.forEach(c => { sparklines[c.id] = c._sparkline })
-        return data.map(c => ({ ...c, _sparkline: sparklines[c.id] ?? [] }))
-      })
+      setCoins(data)
       setSelectedCoin(prev => {
         if (!prev) return data[0] ?? null
         return data.find(c => c.id === prev.id) ?? prev
       })
       setLastUpdated(new Date())
-      if (!silent) setError(null)
-    } catch {
-      if (!silent) setError('Impossible de charger les marchés. Vérifie ta connexion.')
+    } catch (e) {
+      if (!silent && e.message !== 'backoff') setError('Impossible de charger les marchés. Vérifie ta connexion.')
     } finally {
       if (!silent) setLoading(false)
       else setMktRefreshing(false)
@@ -280,12 +295,13 @@ export default function Market() {
     return () => clearInterval(mktTimerRef.current)
   }, [loadMarkets])
 
-  // ── Live price polling 2s ───────────────────────────────────────────────────
+  // ── Live price — seulement pour le coin sélectionné, 90s ─────────────────
   useEffect(() => {
     if (!selectedCoin) return
     setLivePrice(selectedCoin.current_price)
 
     const poll = async () => {
+      if (Date.now() < _backoffUntil) return
       try {
         const newPrice = await fetchLivePrice(selectedCoin.id)
         if (newPrice == null) return
@@ -294,7 +310,7 @@ export default function Market() {
             const dir = newPrice > prev ? 'up' : 'down'
             setLiveFlash(dir)
             setTimeout(() => setLiveFlash(null), 600)
-            // Ajouter point au graphique pour animer la courbe
+            // Ajoute le point au graphique sans refetch
             setChartData(pts => {
               if (!pts.length) return pts
               const next = [...pts, { ts: Date.now(), price: newPrice }]
@@ -303,29 +319,37 @@ export default function Market() {
           }
           return newPrice
         })
-      } catch { /* silencieux si rate-limit */ }
+      } catch { }
     }
 
+    const t0 = setTimeout(poll, 15_000)
     liveTimerRef.current = setInterval(poll, LIVE_INTERVAL)
-    return () => clearInterval(liveTimerRef.current)
+    return () => { clearTimeout(t0); clearInterval(liveTimerRef.current) }
   }, [selectedCoin?.id])
 
-  // ── Fetch chart data ────────────────────────────────────────────────────────
+  // ── Fetch chart — UNIQUEMENT sur changement de coin OU chartFilter ────────
+  // N'est PAS déclenché par listFilter — les deux sont totalement indépendants
   useEffect(() => {
     if (!selectedCoin) return
-    const tf = TIME_FILTERS.find(t => t.id === timeFilter)
-    const key = `${selectedCoin.id}-${timeFilter}`
+    const tf  = TIME_FILTERS.find(t => t.id === chartFilter)
+    const key = `${selectedCoin.id}-${tf.days}-${tf.minutesBack}`
 
-    if (chartCache.current[key]) {
-      setChartData(chartCache.current[key])
+    const cached = _chartCache[key]
+    if (cached && Date.now() - cached.ts < CHART_TTL) {
+      setChartData(cached.data)
       return
     }
+    if (Date.now() < _backoffUntil) {
+      if (cached) setChartData(cached.data)
+      return
+    }
+
     setChartLoading(true)
     fetchChart(selectedCoin.id, tf.days, tf.minutesBack)
-      .then(data => { chartCache.current[key] = data; setChartData(data) })
-      .catch(() => setChartData([]))
+      .then(data => setChartData(data))
+      .catch(() => setChartData(_chartCache[key]?.data ?? []))
       .finally(() => setChartLoading(false))
-  }, [selectedCoin?.id, timeFilter])
+  }, [selectedCoin?.id, chartFilter])   // ← chartFilter seulement, pas listFilter
 
   const handleSelectCoin = useCallback((coin) => {
     setSelectedCoin(coin)
@@ -333,15 +357,17 @@ export default function Market() {
     setLiveFlash(null)
   }, [])
 
-  // ── Pull-to-refresh ─────────────────────────────────────────────────────────
+  // ── Pull-to-refresh — vide uniquement le cache du coin sélectionné ────────
   const handlePull = useCallback(async () => {
-    chartCache.current = {}
+    if (selectedCoin) {
+      Object.keys(_chartCache).forEach(k => { if (k.startsWith(selectedCoin.id + '-')) delete _chartCache[k] })
+    }
     await loadMarkets(true)
-  }, [loadMarkets])
+  }, [loadMarkets, selectedCoin])
 
   const { pullY, refreshing: pullRefreshing } = usePullToRefresh(handlePull)
 
-  // ── Computed ─────────────────────────────────────────────────────────────────
+  // ── Computed ──────────────────────────────────────────────────────────────
   const filteredCoins = coins.filter(c =>
     !search || c.name.toLowerCase().includes(search.toLowerCase()) ||
     c.symbol.toLowerCase().includes(search.toLowerCase())
@@ -353,10 +379,10 @@ export default function Market() {
   const chartIsUp = chartData.length >= 2
     ? chartData[chartData.length - 1].price >= chartData[0].price : true
 
-  const pctKey = timeFilter === '1h'  ? 'price_change_percentage_1h_in_currency'
-               : timeFilter === '24h' ? 'price_change_percentage_24h_in_currency'
-               : timeFilter === '7d'  ? 'price_change_percentage_7d_in_currency'
-               : 'price_change_percentage_30d_in_currency'
+  const pctKey   = chartFilter === '1h'  ? 'price_change_percentage_1h_in_currency'
+                 : chartFilter === '24h' ? 'price_change_percentage_24h_in_currency'
+                 : chartFilter === '7d'  ? 'price_change_percentage_7d_in_currency'
+                 : 'price_change_percentage_30d_in_currency'
   const coinPct  = selectedCoin ? (selectedCoin[pctKey] ?? 0) : 0
   const coinIsUp = coinPct >= 0
 
@@ -391,7 +417,7 @@ export default function Market() {
               </p>
             </div>
           </div>
-          <button onClick={() => { chartCache.current = {}; loadMarkets(true) }} disabled={loading || mktRefreshing}
+          <button onClick={() => loadMarkets(true)} disabled={loading || mktRefreshing}
             className="flex items-center gap-2 px-3 py-2 bg-surface-card border border-surface-border rounded-xl text-xs text-zinc-400 hover:text-zinc-900 dark:hover:text-white transition-all">
             <RefreshCw size={12} className={clsx((loading || mktRefreshing) && 'animate-spin')} />
             {mktRefreshing ? 'Actualisation…' : 'Actualiser'}
@@ -406,14 +432,15 @@ export default function Market() {
 
         <div className="flex flex-col lg:flex-row gap-4">
 
-          {/* Liste */}
+          {/* Liste — contrôlée par listFilter uniquement */}
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 mb-3 flex-wrap">
+              {/* listFilter — ne touche PAS au graphique */}
               <div className="flex bg-surface-card border border-surface-border rounded-xl p-1 gap-1">
                 {TIME_FILTERS.map(tf => (
-                  <button key={tf.id} onClick={() => setTimeFilter(tf.id)}
+                  <button key={tf.id} onClick={() => setListFilter(tf.id)}
                     className={clsx('px-3 py-1.5 text-xs font-semibold rounded-lg transition-all',
-                      timeFilter === tf.id
+                      listFilter === tf.id
                         ? 'bg-surface-muted text-zinc-900 dark:text-white'
                         : 'text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-300')}>
                     {tf.label}
@@ -432,7 +459,7 @@ export default function Market() {
               <div className="w-6 text-center">#</div>
               <div className="w-9" />
               <div className="flex-1">Actif</div>
-              <div className="hidden sm:block w-20 text-right">Chart</div>
+              <div className="hidden sm:block w-20 text-right">7J</div>
               <div className="w-20 text-right">Var.</div>
               <div className="hidden md:block w-28 text-right">Prix / Mcap</div>
             </div>
@@ -454,14 +481,19 @@ export default function Market() {
                   <p className="text-sm">Aucun résultat</p>
                 </div>
               ) : filteredCoins.map(coin => (
-                <CoinRow key={coin.id} coin={coin} timeFilter={timeFilter}
+                <CoinRow
+                  key={coin.id}
+                  coin={coin}
+                  listFilter={listFilter}
                   livePrice={selectedCoin?.id === coin.id ? livePrice : null}
-                  onClick={handleSelectCoin} isSelected={selectedCoin?.id === coin.id} />
+                  onClick={handleSelectCoin}
+                  isSelected={selectedCoin?.id === coin.id}
+                />
               ))}
             </div>
           </div>
 
-          {/* Détail */}
+          {/* Détail — contrôlé par chartFilter uniquement */}
           {selectedCoin && (
             <div className="lg:w-80 xl:w-96 shrink-0 space-y-4">
 
@@ -491,9 +523,9 @@ export default function Market() {
                 <div className="grid grid-cols-2 gap-3">
                   {[
                     { label: 'Cap. Marché', value: fmtMcap(selectedCoin.market_cap) },
-                    { label: 'Vol. 24h',          value: fmtMcap(selectedCoin.total_volume) },
-                    { label: 'ATH',               value: fmtEur(selectedCoin.ath) },
-                    { label: 'Rang',              value: `#${selectedCoin.market_cap_rank}` },
+                    { label: 'Vol. 24h',    value: fmtMcap(selectedCoin.total_volume) },
+                    { label: 'ATH',         value: fmtEur(selectedCoin.ath) },
+                    { label: 'Rang',        value: `#${selectedCoin.market_cap_rank}` },
                   ].map(({ label, value }) => (
                     <div key={label} className="bg-surface-muted rounded-xl px-3 py-2.5">
                       <p className="text-[10px] text-zinc-600 uppercase tracking-wider mb-1">{label}</p>
@@ -502,6 +534,7 @@ export default function Market() {
                   ))}
                 </div>
 
+                {/* Variations dans le panel détail — ces boutons changent chartFilter */}
                 <div className="mt-3 pt-3 border-t border-surface-border">
                   <p className="text-[10px] text-zinc-600 uppercase tracking-wider mb-2">Variations</p>
                   <div className="flex gap-2">
@@ -513,9 +546,9 @@ export default function Market() {
                       const v  = selectedCoin[k]
                       const up = (v ?? 0) >= 0
                       return (
-                        <button key={tf.id} onClick={() => setTimeFilter(tf.id)}
+                        <button key={tf.id} onClick={() => setChartFilter(tf.id)}
                           className={clsx('flex flex-col items-center px-2 py-1.5 rounded-lg flex-1 transition-all',
-                            timeFilter === tf.id
+                            chartFilter === tf.id
                               ? 'bg-brand-500/10 border border-brand-500/20'
                               : 'bg-surface-muted hover:bg-surface-border')}>
                           <span className="text-[10px] text-zinc-500 mb-0.5">{tf.label}</span>
@@ -529,7 +562,7 @@ export default function Market() {
                 </div>
               </div>
 
-              {/* Graphique */}
+              {/* Graphique — chartFilter uniquement */}
               <div className="bg-surface-card border border-surface-border rounded-2xl p-5">
                 <div className="flex items-center justify-between mb-4">
                   <div className="flex items-center gap-2">
@@ -538,9 +571,9 @@ export default function Market() {
                   </div>
                   <div className="flex bg-surface-muted rounded-lg p-0.5 gap-0.5">
                     {TIME_FILTERS.map(tf => (
-                      <button key={tf.id} onClick={() => setTimeFilter(tf.id)}
+                      <button key={tf.id} onClick={() => setChartFilter(tf.id)}
                         className={clsx('px-2 py-1 text-[10px] font-semibold rounded-md transition-all',
-                          timeFilter === tf.id
+                          chartFilter === tf.id
                             ? 'bg-surface-card text-zinc-900 dark:text-white shadow-sm'
                             : 'text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-300')}>
                         {tf.label}
@@ -561,13 +594,13 @@ export default function Market() {
                         </linearGradient>
                       </defs>
                       <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" />
-                      <XAxis dataKey="ts" tickFormatter={ts => fmtChartDate(ts, timeFilter)}
+                      <XAxis dataKey="ts" tickFormatter={ts => fmtChartDate(ts, chartFilter)}
                         tick={{ fontSize: 9, fill: '#71717a' }} axisLine={false} tickLine={false}
                         interval="preserveStartEnd" />
                       <YAxis domain={[chartMin, chartMax]}
                         tickFormatter={v => fmtEur(v).replace(' €', '')}
                         tick={{ fontSize: 9, fill: '#71717a' }} axisLine={false} tickLine={false} width={60} />
-                      <Tooltip content={<ChartTooltip filter={timeFilter} />} />
+                      <Tooltip content={<ChartTooltip filter={chartFilter} />} />
                       <Area type="monotone" dataKey="price" isAnimationActive={false}
                         stroke={chartIsUp ? '#22c55e' : '#ef4444'} strokeWidth={1.5}
                         fill="url(#chartGrad)" dot={false}
