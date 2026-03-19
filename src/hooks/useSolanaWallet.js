@@ -214,4 +214,3 @@ export function useSolanaWallet() {
 
   return { address: activeAddress, isWalletConnect: !!wcSolAddr && !disconnected, solanaData, loading, error, connectManual, disconnect, refresh }
 }
-
