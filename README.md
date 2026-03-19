@@ -27,7 +27,7 @@ Application web de suivi de bankroll et de portfolio crypto. Conçue pour tracke
 - Transactions récentes par chain
 
 **Marchés**
-- 40+ cryptos suivies (BTC, ETH, SOL, HYPE, PEPE, WIF, SUI, BONK...)
+- 41 cryptos suivies (BTC, ETH, SOL, HYPE, PEPE, WIF, SUI, BONK...)
 - Prix live, graphiques 1H / 24H / 7J / 1M
 - Sparklines 7 jours dans la liste
 - Cache intelligent pour limiter les appels API
@@ -75,7 +75,7 @@ VITE_FIREBASE_PROJECT_ID=
 VITE_FIREBASE_STORAGE_BUCKET=
 VITE_FIREBASE_MESSAGING_SENDER_ID=
 VITE_FIREBASE_APP_ID=
-VITE_COINGECKO_KEY=        # optionnel mais très recommandé sinon api très limité — free tier sur coingecko.com
+VITE_COINGECKO_KEY=        # optionnel mais recommandé — free tier sur coingecko.com
 VITE_HELIUS_API_KEY=       # optionnel — free tier sur helius.dev (Solana)
 ```
 
@@ -121,4 +121,3 @@ Tous les prix crypto passent par `src/services/priceCache.js` qui centralise les
 - CoinGecko free tier : ~30 req/min. En dev, l'IP localhost est plus vite throttlée qu'en production. Renseigner `VITE_COINGECKO_KEY` atténue le problème.
 - Les RPC Ethereum publics peuvent être instables. Le hook tente 4 endpoints en cascade.
 - Bitcoin : lecture seule via adresse publique (pas de WalletConnect BTC natif).
-

@@ -37,7 +37,7 @@ const bitcoinAdapter = new BitcoinAdapter({ projectId })
 // ─── AppKit multi-chain ───────────────────────────────────────────────────────
 export const networks = [mainnet, solana, bitcoin]
 
-createAppKit({
+export const modal = createAppKit({
   adapters:  [wagmiAdapter, solanaAdapter, bitcoinAdapter],
   networks,
   projectId,

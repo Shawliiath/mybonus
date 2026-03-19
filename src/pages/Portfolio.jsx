@@ -1,4 +1,5 @@
 import { classifyWalletError } from '../utils/walletError'
+import SendModal from '../components/wallet/SendModal'
 import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react'
 import { Link } from 'react-router-dom'
 import AppLayout from '../components/layout/AppLayout'
@@ -10,7 +11,7 @@ import { useCurrencyRates } from '../hooks/useCurrency'
 import {
   Wallet, RefreshCw, Copy, Check, ExternalLink,
   TrendingUp, TrendingDown, ArrowDownCircle, ArrowUpCircle,
-  AlertCircle, Search, Zap, Unplug, ChevronRight, BarChart3, X, Plus, Globe, ArrowLeft
+  AlertCircle, Search, Zap, Unplug, ChevronRight, BarChart3, X, Plus, Globe, ArrowLeft, Send
 } from 'lucide-react'
 import clsx from 'clsx'
 import { format } from 'date-fns'
@@ -175,12 +176,10 @@ function TokenLogo({ symbol, chain, size = 44 }) {
 
 // ─── Token Row ────────────────────────────────────────────────────────────────
 function TokenRow({ symbol, name, balance, valueEur, chain, change24h, allTotal, onClick, currency = '€', rate = 1 }) {
-  const style  = tokenStyle(symbol)
   const isUp   = (change24h ?? 0) >= 0
-  const weight = allTotal > 0 && valueEur ? (valueEur / allTotal) * 100 : 0
 
   return (
-    <button onClick={onClick} className="w-full flex items-center gap-4 px-5 py-4 hover:bg-surface-muted/30 transition-colors text-left group">
+    <button onClick={onClick} className="w-full flex items-center gap-4 px-5 py-4 hover:bg-surface-muted/30 transition-colors text-left">
       <TokenLogo symbol={symbol} chain={chain} size={44} />
       <div className="flex-1 min-w-0 overflow-hidden">
         <div className="flex items-center gap-2 mb-0.5">
@@ -189,12 +188,9 @@ function TokenRow({ symbol, name, balance, valueEur, chain, change24h, allTotal,
             {CHAIN_LABELS[chain] ?? chain}
           </span>
         </div>
-        <div className="flex items-center gap-2 flex-wrap">
-          <p className="text-xs text-zinc-500 font-mono truncate">
-            {valueEur != null && balance > 0 ? fmtEur(valueEur / balance, currency, rate) + ' · ' : ''}{fmtCrypto(balance)} {symbol}
-          </p>
-
-        </div>
+        <p className="text-xs text-zinc-500 font-mono truncate">
+          {valueEur != null && balance > 0 ? fmtEur(valueEur / balance, currency, rate) + ' · ' : ''}{fmtCrypto(balance)} {symbol}
+        </p>
       </div>
       <div className="text-right shrink-0">
         <p className="text-sm font-semibold text-zinc-900 dark:text-white font-mono">
@@ -228,7 +224,7 @@ function fmtChartDatePtf(ts, filter) {
   return d.toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' })
 }
 
-function TokenModal({ asset, onClose }) {
+function TokenModal({ asset, onClose, onSend }) {
   const cgId = symbolToCgId(asset.symbol)
   const [timeFilter,   setTimeFilter]   = useState('24h')
   const [chartData,    setChartData]    = useState([])
@@ -432,13 +428,26 @@ function TokenModal({ asset, onClose }) {
             )}
           </div>
 
-          {/* Lien vers marchés */}
-          <Link to="/market" onClick={onClose}
-            className="flex items-center justify-center gap-2 w-full py-3 bg-brand-500/10 hover:bg-brand-500/15 border border-brand-500/20 rounded-2xl text-sm text-brand-400 font-semibold transition-all">
-            <Globe size={15} />
-            Voir {asset.name} sur les marchés
-            <ChevronRight size={14} />
-          </Link>
+          {/* Actions : Envoyer + Voir sur les marchés */}
+          <div className="flex gap-2">
+            {onSend && (
+              <button
+                onClick={onSend}
+                className="flex-1 flex items-center justify-center gap-2 py-3 bg-surface-muted hover:bg-surface-border border border-surface-border rounded-2xl text-sm text-zinc-900 dark:text-white font-semibold transition-all">
+                <Send size={15} />
+                Envoyer
+              </button>
+            )}
+            <Link to="/market" onClick={onClose}
+              className={clsx(
+                "flex items-center justify-center gap-2 py-3 bg-brand-500/10 hover:bg-brand-500/15 border border-brand-500/20 rounded-2xl text-sm text-brand-400 font-semibold transition-all",
+                onSend ? "flex-1" : "w-full"
+              )}>
+              <Globe size={15} />
+              {onSend ? "Marchés" : `Voir ${asset.name} sur les marchés`}
+              {!onSend && <ChevronRight size={14} />}
+            </Link>
+          </div>
         </div>
       </div>
     </div>
@@ -771,6 +780,7 @@ export default function Portfolio() {
   const { address: btcAddress, bitcoinData, loading: btcLoading, error: btcError, connectWallet: btcConnectWallet, connectManual: btcConnectManual, disconnect: btcDisconnect, refresh: btcRefresh } = bitcoin
 
   const [activeTab,     setActiveTab]     = useState('assets')
+  const [sendTarget,    setSendTarget]    = useState(null) // { chain, symbol, maxAmount }
   const [selectedAsset, setSelectedAsset] = useState(null)
   const [copied,    setCopied]    = useState(false)
   const [txFilter,  setTxFilter]  = useState('')
@@ -1093,7 +1103,13 @@ export default function Portfolio() {
               const { key, ...assetProps } = asset
               return (
                 <div key={key} className={clsx(i > 0 && 'border-t border-surface-border')}>
-                  <TokenRow {...assetProps} allTotal={combined} onClick={() => setSelectedAsset(asset)} currency={portfolioCurrency} rate={portfolioRate} />
+                  <TokenRow
+                    {...assetProps}
+                    allTotal={combined}
+                    onClick={() => setSelectedAsset(asset)}
+                    currency={portfolioCurrency}
+                    rate={portfolioRate}
+                  />
                 </div>
               )
             })}
@@ -1157,7 +1173,28 @@ export default function Portfolio() {
       </div>
       {/* Token detail modal */}
       {selectedAsset && (
-        <TokenModal asset={selectedAsset} onClose={() => setSelectedAsset(null)} />
+        <TokenModal
+          asset={selectedAsset}
+          onClose={() => setSelectedAsset(null)}
+          onSend={
+            (selectedAsset.chain === 'eth' && isConnected) ||
+            (selectedAsset.chain === 'sol' && !!solAddress) ||
+            (selectedAsset.chain === 'btc' && !!btcAddress)
+              ? () => {
+                  setSendTarget({ chain: selectedAsset.chain, symbol: selectedAsset.symbol, maxAmount: selectedAsset.balance })
+                  setSelectedAsset(null)
+                }
+              : undefined
+          }
+        />
+      )}
+      {sendTarget && (
+        <SendModal
+          chain={sendTarget.chain}
+          symbol={sendTarget.symbol}
+          maxAmount={sendTarget.maxAmount}
+          onClose={() => setSendTarget(null)}
+        />
       )}
     </AppLayout>
   )
