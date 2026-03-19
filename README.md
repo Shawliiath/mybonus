@@ -121,3 +121,4 @@ Tous les prix crypto passent par `src/services/priceCache.js` qui centralise les
 - CoinGecko free tier : ~30 req/min. En dev, l'IP localhost est plus vite throttlée qu'en production. Renseigner `VITE_COINGECKO_KEY` atténue le problème.
 - Les RPC Ethereum publics peuvent être instables. Le hook tente 4 endpoints en cascade.
 - Bitcoin : lecture seule via adresse publique (pas de WalletConnect BTC natif).
+
