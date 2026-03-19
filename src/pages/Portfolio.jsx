@@ -5,6 +5,7 @@ import { useWalletContext } from '../context/WalletContext'
 import { shortAddr, isValidEthAddress } from '../hooks/useWallet'
 import { isValidSolAddress } from '../hooks/useSolanaWallet'
 import { isValidBtcAddress } from '../hooks/useBitcoinWallet'
+import { useCurrencyRates } from '../hooks/useCurrency'
 import {
   Wallet, RefreshCw, Copy, Check, ExternalLink,
   TrendingUp, TrendingDown, ArrowDownCircle, ArrowUpCircle,
@@ -63,9 +64,14 @@ async function fetchTokenLive(cgId) {
 
 const PIE_COLORS = ['#22c55e','#3b82f6','#f59e0b','#8b5cf6','#ec4899','#06b6d4','#f97316','#10b981','#ef4444']
 
-function fmtEur(v) {
+function fmtEur(v, currency = '€', rate = 1) {
   if (v === null || v === undefined || isNaN(v)) return '—'
-  return v.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' €'
+  const converted = v * rate
+  const sym = currency === '$' ? '$' : currency === '£' ? '£' : currency === 'CHF' ? 'CHF ' : currency === 'CAD' ? 'CAD ' : currency === '₿' ? '₿' : ''
+  const suffix = ['€', '$', '£', 'CHF', 'CAD', '₿'].includes(currency) ? '' : ` ${currency}`
+  const prefix = ['$', '£', '₿'].includes(currency) ? sym : ''
+  const postfix = ['€'].includes(currency) ? ' €' : ['CHF', 'CAD'].includes(currency) ? ` ${currency}` : ''
+  return prefix + converted.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + postfix
 }
 function fmtCrypto(v, dec = 4) {
   if (!v && v !== 0) return '—'
@@ -167,7 +173,7 @@ function TokenLogo({ symbol, chain, size = 44 }) {
 }
 
 // ─── Token Row ────────────────────────────────────────────────────────────────
-function TokenRow({ symbol, name, balance, valueEur, chain, change24h, allTotal, onClick }) {
+function TokenRow({ symbol, name, balance, valueEur, chain, change24h, allTotal, onClick, currency = '€', rate = 1 }) {
   const style  = tokenStyle(symbol)
   const isUp   = (change24h ?? 0) >= 0
   const weight = allTotal > 0 && valueEur ? (valueEur / allTotal) * 100 : 0
@@ -184,14 +190,14 @@ function TokenRow({ symbol, name, balance, valueEur, chain, change24h, allTotal,
         </div>
         <div className="flex items-center gap-2 flex-wrap">
           <p className="text-xs text-zinc-500 font-mono truncate">
-            {valueEur != null && balance > 0 ? fmtEur(valueEur / balance) + ' · ' : ''}{fmtCrypto(balance)} {symbol}
+            {valueEur != null && balance > 0 ? fmtEur(valueEur / balance, currency, rate) + ' · ' : ''}{fmtCrypto(balance)} {symbol}
           </p>
 
         </div>
       </div>
       <div className="text-right shrink-0">
         <p className="text-sm font-semibold text-zinc-900 dark:text-white font-mono">
-          {valueEur != null ? fmtEur(valueEur) : <span className="text-zinc-400 text-xs">Prix indispo</span>}
+          {valueEur != null ? fmtEur(valueEur, currency, rate) : <span className="text-zinc-400 text-xs">Prix indispo</span>}
         </p>
         {change24h != null ? (
           <p className={clsx('text-xs font-mono mt-0.5 font-medium', isUp ? 'text-emerald-400' : 'text-red-400')}>
@@ -731,6 +737,19 @@ function BtcQuickAdd({ onConnect }) {
 }
 
 export default function Portfolio() {
+  const [portfolioCurrency, setPortfolioCurrency] = useState(
+    () => localStorage.getItem('mybonus_portfolio_currency') || '€'
+  )
+  const { convert, rates } = useCurrencyRates('€')
+  const portfolioRate = portfolioCurrency === '€' ? 1 : (rates?.[
+    portfolioCurrency === '$' ? 'USD' : portfolioCurrency === '£' ? 'GBP' : portfolioCurrency === 'CHF' ? 'CHF' : portfolioCurrency === 'CAD' ? 'CAD' : 'USD'
+  ] ?? 1)
+
+  const handlePortfolioCurrency = (c) => {
+    setPortfolioCurrency(c)
+    localStorage.setItem('mybonus_portfolio_currency', c)
+  }
+
   const { eth, solana, bitcoin } = useWalletContext()
   const { address, isConnected, walletData, loading, error, connectWallet, connectManual, disconnect, refresh } = eth
   const { address: solAddress, solanaData, loading: solLoading, error: solError, connectManual: solConnectManual, disconnect: solDisconnect, refresh: solRefresh } = solana
@@ -867,89 +886,75 @@ export default function Portfolio() {
       <div className="max-w-2xl mx-auto px-4 sm:px-6 pb-12">
 
         {/* ── Hero ─────────────────────────────────────────────────────────── */}
-        <div className="py-8 text-center">
-          {isLoading ? (
-            <div className="h-12 w-44 bg-surface-muted rounded-2xl animate-pulse mx-auto mb-3" />
-          ) : (
-            <h1 className="text-5xl font-bold text-zinc-900 dark:text-white tracking-tight mb-2">{fmtEur(combined)}</h1>
-          )}
+        <div className="pt-6 pb-6">
 
-          {walletData && !isLoading && (
-            <div className="flex items-center justify-center gap-2 mb-5">
-              <span className={clsx(
-                'inline-flex items-center gap-1.5 text-sm font-semibold px-3 py-1.5 rounded-full',
-                isEthUp ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
-                        : 'bg-red-500/10 text-red-400 border border-red-500/20'
-              )}>
-                {isEthUp ? <TrendingUp size={13} /> : <TrendingDown size={13} />}
-                {isEthUp ? '+' : ''}{ethChange.toFixed(2)}% · {isEthUp ? '+' : '-'}{fmtEur(changeAbsEur)}
-              </span>
-              <span className="text-xs text-zinc-600">24h sur ETH</span>
-            </div>
-          )}
-
-          {/* Chips wallets */}
-          <div className="flex items-center justify-center gap-2 flex-wrap">
-            {address && (
-              <div className="flex items-center gap-1.5 bg-surface-card border border-surface-border rounded-full px-3 py-1.5">
-                <span className="text-xs text-blue-400 font-bold">Ξ</span>
-                <button onClick={handleCopy} className="flex items-center gap-1 text-xs text-zinc-500 hover:text-zinc-900 dark:hover:text-white font-mono transition-colors">
-                  {copied ? <Check size={10} className="text-emerald-400" /> : <Copy size={10} />}
-                  {shortAddr(address)}
-                </button>
-                <a href={`https://etherscan.io/address/${address}`} target="_blank" rel="noreferrer" className="text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-300 transition-colors">
-                  <ExternalLink size={10} />
-                </a>
-              </div>
-            )}
-            {solAddress && (
-              <div className="flex items-center gap-1.5 bg-surface-card border border-surface-border rounded-full px-3 py-1.5">
-                <span className="text-xs text-purple-400 font-bold">◎</span>
-                <span className="text-xs text-zinc-500 font-mono">{solAddress.slice(0,4)}…{solAddress.slice(-4)}</span>
-                <a href={`https://solscan.io/account/${solAddress}`} target="_blank" rel="noreferrer" className="text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-300 transition-colors">
-                  <ExternalLink size={10} />
-                </a>
-              </div>
-            )}
-            {btcAddress ? (
-              <div className="flex items-center gap-1.5 bg-surface-card border border-amber-500/20 rounded-full px-3 py-1.5">
-                <span className="text-xs text-amber-400 font-bold">₿</span>
-                <span className="text-xs text-zinc-500 font-mono">{btcAddress.slice(0,6)}…{btcAddress.slice(-4)}</span>
-                <a href={`https://blockstream.info/address/${btcAddress}`} target="_blank" rel="noreferrer" className="text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-300 transition-colors">
-                  <ExternalLink size={10} />
-                </a>
-                <button onClick={btcDisconnect} className="text-zinc-400 hover:text-red-400 transition-colors ml-0.5">
-                  <X size={10} />
-                </button>
-              </div>
-            ) : (
-              <BtcQuickAdd onConnect={btcConnectManual} />
-            )}
-            <button onClick={handleRefresh} disabled={loading || solLoading || btcLoading}
-              className="flex items-center gap-1.5 bg-surface-card hover:bg-surface-muted border border-surface-border rounded-full px-3 py-1.5 text-xs text-zinc-500 hover:text-zinc-900 dark:hover:text-white transition-all">
-              <RefreshCw size={11} className={clsx((loading || solLoading || btcLoading) && 'animate-spin')} />
-              Actualiser
-            </button>
-            <button onClick={handleDisconnect}
-              className="flex items-center gap-1.5 bg-red-500/8 hover:bg-red-500/15 border border-red-500/20 rounded-full px-3 py-1.5 text-xs text-red-400 transition-all">
-              <Unplug size={11} />
-              Déconnecter
-            </button>
+          {/* 1. Sélecteur devise — centré tout en haut */}
+          <div className="flex items-center justify-center gap-1.5 mb-5">
+            {['€', '$', '£', 'CHF'].map(c => (
+              <button key={c} onClick={() => handlePortfolioCurrency(c)}
+                className={clsx('px-3 py-1 rounded-lg text-xs font-mono font-semibold transition-all border',
+                  portfolioCurrency === c
+                    ? 'bg-brand-500/15 border-brand-500/30 text-brand-400'
+                    : 'bg-surface-muted border-surface-border text-zinc-500 hover:text-zinc-300'
+                )}>{c}</button>
+            ))}
           </div>
 
-
-
-          {/* Lien marchés */}
-          {!isLoading && (
-            <div className="mt-3 flex justify-center">
-              <Link to="/market"
-                className="inline-flex items-center gap-2 px-4 py-2 bg-surface-card border border-surface-border hover:border-brand-500/30 rounded-xl text-xs text-zinc-500 hover:text-brand-400 transition-all">
-                <Globe size={13} />
-                Voir les marchés crypto
-                <ChevronRight size={12} />
-              </Link>
+          {/* 2. Wallets connectés */}
+          <div className="bg-surface-card border border-surface-border rounded-2xl overflow-hidden mb-5">
+            <div className="px-4 py-3 flex flex-wrap gap-x-4 gap-y-2 border-b border-surface-border">
+              {address && (
+                <a href={`https://etherscan.io/address/${address}`} target="_blank" rel="noreferrer"
+                  className="flex items-center gap-1.5 text-xs font-mono text-zinc-500 hover:text-zinc-300 transition-colors">
+                  <span className="text-blue-400">Ξ</span>{shortAddr(address)}<ExternalLink size={9} className="opacity-50" />
+                </a>
+              )}
+              {solAddress && (
+                <a href={`https://solscan.io/account/${solAddress}`} target="_blank" rel="noreferrer"
+                  className="flex items-center gap-1.5 text-xs font-mono text-zinc-500 hover:text-zinc-300 transition-colors">
+                  <span className="text-purple-400">◎</span>{solAddress.slice(0,4)}…{solAddress.slice(-4)}<ExternalLink size={9} className="opacity-50" />
+                </a>
+              )}
+              {btcAddress ? (
+                <div className="flex items-center gap-1.5">
+                  <a href={`https://blockstream.info/address/${btcAddress}`} target="_blank" rel="noreferrer"
+                    className="flex items-center gap-1.5 text-xs font-mono text-zinc-500 hover:text-zinc-300 transition-colors">
+                    <span className="text-amber-400">₿</span>{btcAddress.slice(0,6)}…{btcAddress.slice(-4)}<ExternalLink size={9} className="opacity-50" />
+                  </a>
+                  <button onClick={btcDisconnect} className="text-zinc-600 hover:text-red-400 transition-colors">
+                    <X size={10} />
+                  </button>
+                </div>
+              ) : (
+                <BtcQuickAdd onConnect={btcConnectManual} />
+              )}
             </div>
-          )}
+            <div className="px-4 py-2.5 flex items-center justify-between">
+              <button onClick={handleRefresh} disabled={loading || solLoading || btcLoading}
+                className="flex items-center gap-1.5 text-xs text-zinc-500 hover:text-zinc-300 transition-colors">
+                <RefreshCw size={11} className={clsx((loading || solLoading || btcLoading) && 'animate-spin')} />
+                Actualiser
+              </button>
+              <button onClick={handleDisconnect}
+                className="flex items-center gap-1.5 text-xs text-red-400/70 hover:text-red-400 transition-colors">
+                <Unplug size={11} />
+                Déconnecter
+              </button>
+            </div>
+          </div>
+
+          {/* 3. Total — centré juste au-dessus de la répartition */}
+          <div className="text-center mb-1">
+            {isLoading ? (
+              <div className="h-10 w-40 bg-surface-muted rounded-2xl animate-pulse mx-auto" />
+            ) : (
+              <div className="text-4xl font-bold text-zinc-900 dark:text-white tracking-tight">
+                {fmtEur(combined, portfolioCurrency, portfolioRate)}
+              </div>
+            )}
+            <p className="text-xs text-zinc-500">Valeur totale</p>
+          </div>
+
         </div>
 
         {/* ── Pie chart ────────────────────────────────────────────────────── */}
@@ -974,7 +979,7 @@ export default function Portfolio() {
                     return (
                       <div className="bg-surface-card border border-surface-border rounded-xl px-3 py-2 text-xs shadow-xl">
                         <p className="text-zinc-900 dark:text-white font-semibold">{d.name}</p>
-                        <p className="text-zinc-400 font-mono">{fmtEur(d.value)}</p>
+                        <p className="text-zinc-400 font-mono">{fmtEur(d.value, portfolioCurrency, portfolioRate)}</p>
                         <p className="text-zinc-500">{d.pct.toFixed(1)}%</p>
                       </div>
                     )
@@ -987,7 +992,7 @@ export default function Portfolio() {
                     <div className="w-2 h-2 rounded-full shrink-0" style={{ background: PIE_COLORS[i % PIE_COLORS.length] }} />
                     <span className="text-xs text-zinc-400 flex-1 truncate">{d.name}</span>
                     <span className="text-xs text-zinc-500 font-mono">{d.pct.toFixed(1)}%</span>
-                    <span className="text-xs text-zinc-900 dark:text-zinc-300 font-mono w-20 text-right">{fmtEur(d.value)}</span>
+                    <span className="text-xs text-zinc-900 dark:text-zinc-300 font-mono w-20 text-right">{fmtEur(d.value, portfolioCurrency, portfolioRate)}</span>
                   </div>
                 ))}
               </div>
@@ -1065,7 +1070,7 @@ export default function Portfolio() {
               const { key, ...assetProps } = asset
               return (
                 <div key={key} className={clsx(i > 0 && 'border-t border-surface-border')}>
-                  <TokenRow {...assetProps} allTotal={combined} onClick={() => setSelectedAsset(asset)} />
+                  <TokenRow {...assetProps} allTotal={combined} onClick={() => setSelectedAsset(asset)} currency={portfolioCurrency} rate={portfolioRate} />
                 </div>
               )
             })}

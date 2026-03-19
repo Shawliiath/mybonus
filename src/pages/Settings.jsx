@@ -1,6 +1,7 @@
-import { useState } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useAuth } from '../context/AuthContext'
 import { updateUserPreferences, updateBankroll, setShareToken, updateShareSettings } from '../firebase/firestore'
+import { useNavigate } from 'react-router-dom'
 import AppLayout from '../components/layout/AppLayout'
 import { Settings as SettingsIcon, Check, DollarSign, User, Wallet, Target, Share2, Copy, RefreshCw, X, TrendingUp, List, ArrowUpCircle, BarChart2 } from 'lucide-react'
 import clsx from 'clsx'
@@ -20,6 +21,34 @@ const SHARE_OPTIONS = [
   { key: 'showGoal',     icon: Target,        label: 'Objectif mensuel',             desc: 'Barre de progression du mois' },
   { key: 'showCrypto',   icon: BarChart2,     label: 'Portfolio crypto',             desc: 'Adresses et valeur des wallets connectés' },
 ]
+
+
+function UnsavedModal({ onSave, onDiscard, onCancel }) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+      <div className="w-full max-w-xs bg-surface-card border border-surface-border rounded-2xl shadow-2xl overflow-hidden">
+        <div className="px-5 pt-5 pb-4">
+          <p className="text-sm font-semibold text-zinc-900 dark:text-white mb-1">Quitter sans sauvegarder ?</p>
+          <p className="text-xs text-zinc-500 leading-relaxed">Tes modifications seront perdues si tu continues.</p>
+        </div>
+        <div className="border-t border-surface-border">
+          <button onClick={onSave}
+            className="w-full px-5 py-3.5 text-sm font-semibold text-brand-400 hover:bg-surface-muted transition-colors border-b border-surface-border text-left">
+            Sauvegarder et continuer
+          </button>
+          <button onClick={onDiscard}
+            className="w-full px-5 py-3.5 text-sm font-medium text-red-400 hover:bg-surface-muted transition-colors border-b border-surface-border text-left">
+            Ignorer les modifications
+          </button>
+          <button onClick={onCancel}
+            className="w-full px-5 py-3.5 text-sm text-zinc-500 hover:bg-surface-muted transition-colors text-left">
+            Annuler
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
 
 export default function Settings() {
   const { user, userData } = useAuth()
@@ -47,6 +76,55 @@ export default function Settings() {
   const [copied,          setCopied]            = useState(false)
 
   const shareUrl = shareToken ? `${window.location.origin}/share/${shareToken}` : null
+
+  // ─── Unsaved changes detection ────────────────────────────────────────────
+  const [showUnsavedModal, setShowUnsavedModal] = useState(false)
+  const [pendingNav,       setPendingNav]       = useState(null)
+
+  const isDirty = (
+    currency    !== (prefs.currency    || '€')    ||
+    weekStart   !== (prefs.weekStart   || 'monday') ||
+    monthlyGoal !== (prefs.monthlyGoal != null ? prefs.monthlyGoal.toString() : '') ||
+    bankrollInput !== (bankrollData.amount?.toString() || '0')
+  )
+
+  // Warn on browser tab close / reload
+  useEffect(() => {
+    const handler = (e) => {
+      if (!isDirty) return
+      e.preventDefault()
+      e.returnValue = ''
+    }
+    window.addEventListener('beforeunload', handler)
+    return () => window.removeEventListener('beforeunload', handler)
+  }, [isDirty])
+
+  const navigate = useNavigate()
+
+  const handleNavIntent = useCallback((path) => {
+    if (isDirty) {
+      setPendingNav(path)
+      setShowUnsavedModal(true)
+    } else {
+      navigate(path)
+    }
+  }, [isDirty, navigate])
+
+  const handleSaveAndNav = async () => {
+    await handleSave()
+    setShowUnsavedModal(false)
+    if (pendingNav) navigate(pendingNav)
+  }
+
+  const handleDiscard = () => {
+    // Reset to saved values
+    setCurrency(prefs.currency || '€')
+    setWeekStart(prefs.weekStart || 'monday')
+    setMonthlyGoal(prefs.monthlyGoal != null ? prefs.monthlyGoal.toString() : '')
+    setBankrollInput(bankrollData.amount?.toString() || '0')
+    setShowUnsavedModal(false)
+    if (pendingNav) navigate(pendingNav)
+  }
 
   const handleSave = async () => {
     setSaving(true)
@@ -93,8 +171,17 @@ export default function Settings() {
     setTimeout(() => setCopied(false), 2000)
   }
 
-  const toggleSetting = (key) => {
-    setShareSettings(prev => ({ ...prev, [key]: !prev[key] }))
+  const toggleSetting = async (key) => {
+    const updated = { ...shareSettings, [key]: !shareSettings[key] }
+    setShareSettings(updated)
+    // Auto-save immédiatement si un lien existe déjà
+    if (shareToken) {
+      setSettingsSaving(true)
+      await updateShareSettings(user.uid, updated)
+      setSettingsSaving(false)
+      setSettingsSaved(true)
+      setTimeout(() => setSettingsSaved(false), 1500)
+    }
   }
 
   const btnClass = (active) => clsx(
@@ -107,7 +194,15 @@ export default function Settings() {
   const inputClass = 'w-full bg-surface-muted border border-surface-border rounded-xl py-2.5 pl-10 pr-4 text-sm font-mono text-zinc-900 dark:text-white focus:outline-none focus:border-brand-500/60 focus:ring-1 focus:ring-brand-500/30 transition-all'
 
   return (
-    <AppLayout>
+    <>
+    {showUnsavedModal && (
+      <UnsavedModal
+        onSave={handleSaveAndNav}
+        onDiscard={handleDiscard}
+        onCancel={() => setShowUnsavedModal(false)}
+      />
+    )}
+    <AppLayout onNavClick={handleNavIntent}>
       <div className="px-4 sm:px-6 py-6 sm:py-8 max-w-2xl mx-auto space-y-5 sm:space-y-6 animate-fade-in">
         <div>
           <h1 className="text-xl sm:text-2xl font-bold text-zinc-900 dark:text-white">Paramètres</h1>
@@ -215,19 +310,14 @@ export default function Settings() {
                   {copied ? <><Check size={12} /> Copié</> : <><Copy size={12} /> Copier</>}
                 </button>
               </div>
-              <div className="flex items-center gap-3">
-                <button onClick={handleSaveShareSettings} disabled={settingsSaving}
-                  className={clsx(
-                    'flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium transition-all',
-                    settingsSaved
-                      ? 'bg-brand-500/15 text-brand-400 border border-brand-500/20'
-                      : 'bg-surface-muted hover:bg-zinc-700 border border-surface-border text-zinc-400 hover:text-white'
-                  )}>
-                  {settingsSaved ? <><Check size={11} /> Mis à jour</> : settingsSaving ? 'Sauvegarde…' : 'Mettre à jour les permissions'}
-                </button>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-1.5 h-6">
+                  {settingsSaving && <span className="text-xs text-zinc-500">Sauvegarde…</span>}
+                  {settingsSaved && <span className="flex items-center gap-1 text-xs text-brand-400"><Check size={11} />Mis à jour</span>}
+                </div>
                 <button onClick={handleRevokeLink} disabled={shareLoading}
                   className="flex items-center gap-1.5 text-xs text-zinc-500 hover:text-red-400 transition-colors">
-                  <X size={12} />Révoquer
+                  <X size={12} />Révoquer le lien
                 </button>
               </div>
             </div>
@@ -253,6 +343,7 @@ export default function Settings() {
         </div>
       </div>
     </AppLayout>
+    </>
   )
 }
 

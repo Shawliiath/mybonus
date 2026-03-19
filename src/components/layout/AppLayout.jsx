@@ -41,7 +41,7 @@ const NAV = [
   { to: '/settings',  icon: Settings,         label: 'Paramètres' },
 ]
 
-export default function AppLayout({ children }) {
+export default function AppLayout({ children, onNavClick }) {
   const { user, userData } = useAuth()
   const { theme, toggle } = useTheme()
   const navigate = useNavigate()
@@ -52,7 +52,10 @@ export default function AppLayout({ children }) {
   const handleLogout = async () => { await logout(); navigate('/login') }
 
   const NavItems = ({ onClick }) => NAV.map(({ to, icon: Icon, label }) => (
-    <NavLink key={to} to={to} onClick={onClick}
+    <NavLink key={to} to={to} onClick={(e) => {
+      if (onNavClick) { e.preventDefault(); onNavClick(to) }
+      if (onClick) onClick()
+    }}
       className={({ isActive }) => clsx(
         'flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-150 group',
         isActive
