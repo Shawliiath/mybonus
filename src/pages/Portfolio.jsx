@@ -1,3 +1,4 @@
+import { classifyWalletError } from '../utils/walletError'
 import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react'
 import { Link } from 'react-router-dom'
 import AppLayout from '../components/layout/AppLayout'
@@ -510,6 +511,20 @@ function TxRow({ tx, chain }) {
 
 
 // ─── Écran connexion ──────────────────────────────────────────────────────────
+/** Affiche une erreur wallet — accepte un objet {icon,text,sub} ou une string brute */
+function WalletErrorMsg({ err }) {
+  if (!err) return null
+  const isObj = err && typeof err === 'object'
+  const text  = isObj ? err.text : err
+  const sub   = isObj ? err.sub  : null
+  return (
+    <div className="mt-2 text-xs text-red-400">
+      <p>{text}</p>
+      {sub && <p className="text-red-400/60 mt-0.5">{sub}</p>}
+    </div>
+  )
+}
+
 function ConnectScreen({ onConnectWallet, onConnectManual, onConnectSolana, onConnectBitcoin, error, solError, btcError }) {
   const [ethInput, setEthInput] = useState('')
   const [solInput, setSolInput] = useState('')
@@ -586,7 +601,7 @@ function ConnectScreen({ onConnectWallet, onConnectManual, onConnectSolana, onCo
               Analyser
             </button>
           </form>
-          {(ethErr || error) && <p className="text-xs text-red-400 mt-2 flex items-center gap-1"><AlertCircle size={11} />{ethErr || error}</p>}
+          <WalletErrorMsg err={ethErr || error} />
         </div>
 
         {/* SOL */}
@@ -606,7 +621,7 @@ function ConnectScreen({ onConnectWallet, onConnectManual, onConnectSolana, onCo
               Analyser
             </button>
           </form>
-          {solError && <p className="text-xs text-red-400 mt-2 flex items-center gap-1"><AlertCircle size={11} />{solError}</p>}
+          <WalletErrorMsg err={solError} />
         </div>
 
         {/* BTC */}
@@ -634,7 +649,7 @@ function ConnectScreen({ onConnectWallet, onConnectManual, onConnectSolana, onCo
               Suivre
             </button>
           </form>
-          {(btcErr || btcError) && <p className="text-xs text-red-400 mt-2 flex items-center gap-1"><AlertCircle size={11} />{btcErr || btcError}</p>}
+          <WalletErrorMsg err={btcErr || btcError} />
         </div>
       </div>
     </div>
@@ -873,6 +888,14 @@ export default function Portfolio() {
 
   return (
     <AppLayout>
+      {/* Bannière erreur refresh — visible même si data déjà chargée */}
+      {(error || solError || btcError) && (
+        <div className="max-w-4xl mx-auto px-4 pt-4">
+          {error    && <div className="mb-2"><WalletErrorMsg err={error} /></div>}
+          {solError && <div className="mb-2"><WalletErrorMsg err={solError} /></div>}
+          {btcError && <div className="mb-2"><WalletErrorMsg err={btcError} /></div>}
+        </div>
+      )}
       {/* Pull-to-refresh indicator mobile */}
       <div className="flex items-center justify-center overflow-hidden transition-all duration-200 ease-out lg:hidden"
         style={{ height: pullY > 0 ? pullY : 0 }}>

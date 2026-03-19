@@ -1,3 +1,4 @@
+import { classifyWalletError } from '../utils/walletError'
 /**
  * useBitcoinWallet
  * Prix via priceCache centralisé — zéro requête CoinGecko dédiée.
@@ -90,7 +91,7 @@ export function useBitcoinWallet() {
     if (!isValidBtcAddress(addr)) { setError('Adresse Bitcoin invalide'); return }
     setLoading(true); setError(null); setBitcoinData(null)
     try { setBitcoinData(await fetchBitcoinPortfolio(addr)) }
-    catch (e) { setError(e.message ?? 'Erreur inconnue') }
+    catch (e) { setError(classifyWalletError(e)) }
     finally { setLoading(false) }
   }, [])
 

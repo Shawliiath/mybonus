@@ -1,3 +1,4 @@
+import { classifyWalletError } from '../utils/walletError'
 /**
  * useSolanaWallet
  * Prix via priceCache centralisé — zéro requête CoinGecko dédiée.
@@ -189,7 +190,7 @@ export function useSolanaWallet() {
     if (!isValidSolAddress(addr)) { setError('Adresse Solana invalide'); return }
     setLoading(true); setError(null); setSolanaData(null)
     try { setSolanaData(await fetchSolanaPortfolio(addr)) }
-    catch (e) { setError(e.message ?? 'Erreur inconnue') }
+    catch (e) { setError(classifyWalletError(e)) }
     finally { setLoading(false) }
   }, [])
 

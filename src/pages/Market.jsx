@@ -35,14 +35,40 @@ let _inflightMarket = null
 const CG_KEY     = import.meta.env.VITE_COINGECKO_KEY ?? ''
 const CG_HEADERS = CG_KEY ? { 'x-cg-demo-api-key': CG_KEY } : {}
 
+// Compteur de "Load failed" consécutifs pour détecter le rate-limit déguisé en CORS error
+let _loadFailCount = 0
+let _loadFailTs    = 0
+
 async function cgFetch(url) {
   if (Date.now() < _backoffUntil) throw new Error('backoff')
-  const res = await fetch(url, { headers: CG_HEADERS, signal: AbortSignal.timeout(8000) })
+  let res
+  try {
+    res = await fetch(url, { headers: CG_HEADERS, signal: AbortSignal.timeout(8000) })
+  } catch (e) {
+    const msg = (e?.message ?? '').toLowerCase()
+    // Sur Safari/iOS, un 429 génère un CORS error "Load failed" avant qu'on lise le status
+    if (msg === 'load failed' || msg.includes('load failed')) {
+      const now = Date.now()
+      if (now - _loadFailTs > 30_000) _loadFailCount = 0
+      _loadFailCount++
+      _loadFailTs = now
+      if (_loadFailCount >= 2) {
+        // Plusieurs "Load failed" consécutifs = très probablement du rate-limit
+        _backoffUntil = Date.now() + 60_000
+        _loadFailCount = 0
+        throw new Error('rate-limit')
+      }
+    }
+    if (e.name === 'TimeoutError' || e.name === 'AbortError') throw new Error('timeout')
+    throw new Error('network')
+  }
   if (res.status === 429) {
     _backoffUntil = Date.now() + 60_000
+    _loadFailCount = 0
     throw new Error('rate-limit')
   }
   if (!res.ok) throw new Error(`api-error ${res.status}`)
+  _loadFailCount = 0  // reset si succès
   return res.json()
 }
 
@@ -250,6 +276,7 @@ export default function Market() {
   const [coins,        setCoins]        = useState([])
   const [loading,      setLoading]      = useState(true)
   const [error,        setError]        = useState(null)
+  const [errorType,    setErrorType]    = useState(null) // 'rate-limit' | 'network' | 'generic'
   const [search,       setSearch]       = useState('')
 
   // ── DEUX filtres INDÉPENDANTS ─────────────────────────────────────────────
@@ -271,7 +298,7 @@ export default function Market() {
 
   // ── Load market list ────────────────────────────────────────────────────────
   const loadMarkets = useCallback(async (silent = false) => {
-    if (!silent) { setLoading(true); setError(null) }
+    if (!silent) { setLoading(true); setError(null); setErrorType(null) }
     else setMktRefreshing(true)
     try {
       const data = await fetchMarkets()
@@ -282,7 +309,22 @@ export default function Market() {
       })
       setLastUpdated(new Date())
     } catch (e) {
-      if (!silent && e.message !== 'backoff') setError('Impossible de charger les marchés. Vérifie ta connexion.')
+      if (!silent) {
+        if (e.message === 'rate-limit' || e.message === 'backoff') {
+          setError('Trop de requêtes — patiente quelques secondes puis réessaie.')
+          setErrorType('rate-limit')
+        } else if (e.message === 'network' || e.message === 'timeout') {
+          setError('Pas de connexion réseau. Vérifie ta connexion internet.')
+          setErrorType('network')
+        } else if ((e.message ?? '').toLowerCase().includes('load failed')) {
+          // "Load failed" sur Safari = CORS block, probablement du rate-limit
+          setError('Trop de requêtes — patiente quelques secondes puis réessaie.')
+          setErrorType('rate-limit')
+        } else {
+          setError('Impossible de charger les données. Réessaie dans un moment.')
+          setErrorType('generic')
+        }
+      }
     } finally {
       if (!silent) setLoading(false)
       else setMktRefreshing(false)
@@ -425,8 +467,16 @@ export default function Market() {
         </div>
 
         {error && (
-          <div className="bg-red-500/10 border border-red-500/20 rounded-2xl p-4 mb-4 text-sm text-red-400">
-            {error}
+          <div className="bg-red-500/10 border border-red-500/20 rounded-2xl p-4 mb-4 text-sm text-red-400 flex items-start gap-3">
+            <span className="text-lg leading-none mt-0.5">
+              
+            </span>
+            <div>
+              <p className="font-semibold">{error}</p>
+              {errorType === 'rate-limit' && (
+                <p className="text-xs text-red-400/70 mt-1">Les données précédentes sont affichées si disponibles.</p>
+              )}
+            </div>
           </div>
         )}
 

@@ -1,3 +1,4 @@
+import { classifyWalletError } from '../utils/walletError'
 /**
  * useWallet (ETH)
  * Prix via priceCache centralisé — zéro requête CoinGecko dédiée.
@@ -18,10 +19,10 @@ export function shortAddr(addr) {
 }
 
 const PUBLIC_RPCS = [
-  'https://1rpc.io/eth',
-  'https://rpc.flashbots.net',
-  'https://eth.drpc.org',
-  'https://ethereum.publicnode.com',
+  'https://eth.drpc.org',               // CORS ok, pas de restriction localhost
+  'https://ethereum.publicnode.com',    // CORS ok
+  'https://rpc.ankr.com/eth',           // Ankr — public, CORS ok
+  'https://cloudflare-eth.com',         // Cloudflare — CORS ok
 ]
 
 async function rpcPost(url, method, params) {
@@ -212,7 +213,7 @@ export function useWallet() {
     if (!isValidEthAddress(addr)) return
     setLoading(true); setError(null); setWalletData(null)
     try { setWalletData(await fetchPortfolioData(addr)) }
-    catch (e) { setError(e.message || 'Erreur lors du chargement') }
+    catch (e) { setError(classifyWalletError(e)) }
     finally { setLoading(false) }
   }, [])
 
