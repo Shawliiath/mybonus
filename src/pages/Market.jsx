@@ -16,9 +16,19 @@ const TIME_FILTERS = [
 ]
 
 const COINS_LIST = [
-  'bitcoin','ethereum','solana','binancecoin','ripple',
-  'cardano','avalanche-2','chainlink','polkadot','uniswap',
-  'dogecoin','litecoin','polygon','the-open-network','near',
+  // Top market cap
+  'bitcoin','ethereum','binancecoin','ripple','solana',
+  'cardano','dogecoin','tron','avalanche-2','shiba-inu',
+  // DeFi & infra
+  'chainlink','polkadot','uniswap','polygon','near',
+  'litecoin','the-open-network','internet-computer','aptos','arbitrum',
+  // Tendance / hype
+  'pepe','bonk','dogwifcoin','floki','brett-based',
+  'sui','sei-network','injective-protocol','celestia','render-token',
+  // Ecosystèmes
+  'cosmos','algorand','vechain','filecoin','hedera-hashgraph',
+  'optimism','base','mantle','stacks','immutable-x',
+  'hyperliquid',
 ]
 
 // Intervalles larges — fluide sans spam
@@ -76,7 +86,7 @@ async function fetchMarkets() {
   if (_inflightMarket) return _inflightMarket
   const ids = COINS_LIST.join(',')
   _inflightMarket = cgFetch(
-    `https://api.coingecko.com/api/v3/coins/markets?vs_currency=eur&ids=${ids}&order=market_cap_desc&per_page=15&page=1&sparkline=true&price_change_percentage=1h,24h,7d,30d`
+    `https://api.coingecko.com/api/v3/coins/markets?vs_currency=eur&ids=${ids}&order=market_cap_desc&per_page=41&page=1&sparkline=true&price_change_percentage=1h,24h,7d,30d`
   ).finally(() => { _inflightMarket = null })
   return _inflightMarket
 }
@@ -397,6 +407,12 @@ export default function Market() {
     setSelectedCoin(coin)
     setLivePrice(coin.current_price)
     setLiveFlash(null)
+    // Sur mobile, scroll vers le panel détail qui s'affiche en haut
+    if (window.innerWidth < 1024) {
+      setTimeout(() => {
+        document.getElementById('coin-detail-panel')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+      }, 50)
+    }
   }, [])
 
   // ── Pull-to-refresh — vide uniquement le cache du coin sélectionné ────────
@@ -480,7 +496,7 @@ export default function Market() {
           </div>
         )}
 
-        <div className="flex flex-col lg:flex-row gap-4">
+        <div className="flex flex-col lg:flex-row gap-4" id="market-layout">
 
           {/* Liste — contrôlée par listFilter uniquement */}
           <div className="flex-1 min-w-0">
@@ -545,7 +561,16 @@ export default function Market() {
 
           {/* Détail — contrôlé par chartFilter uniquement */}
           {selectedCoin && (
-            <div className="lg:w-80 xl:w-96 shrink-0 space-y-4">
+            <div id="coin-detail-panel" className="lg:w-80 xl:w-96 shrink-0 space-y-4 order-first lg:order-last">
+              {/* Header mobile — visible uniquement sur petits écrans */}
+              <div className="flex items-center justify-between lg:hidden mb-1">
+                <p className="text-xs text-zinc-500 font-medium uppercase tracking-wider">Détail</p>
+                <button
+                  onClick={() => setSelectedCoin(null)}
+                  className="text-xs text-zinc-400 hover:text-zinc-900 dark:hover:text-white px-2 py-1 rounded-lg bg-surface-muted transition-colors">
+                  Fermer
+                </button>
+              </div>
 
               {/* Header coin */}
               <div className="bg-surface-card border border-surface-border rounded-2xl p-5">
