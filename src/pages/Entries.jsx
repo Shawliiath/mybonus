@@ -39,22 +39,22 @@ export default function Entries() {
 
   const { entries,  loading: loadE, add: addEntry,   update: updateEntry,   remove: removeEntry }   = useEntries(filtersArg)
   const { expenses, loading: loadX, add: addExpense, update: updateExpense, remove: removeExpense } = useExpenses(filtersArg)
-  const { convert } = useCurrencyRates(storedCurrency)
+  const { convert } = useCurrencyRates('€')
 
   const convertedEntries = useMemo(() => {
-    if (displayCurrency === storedCurrency || !convert) return entries
+    if (displayCurrency === '€' || !convert) return entries
     return entries.map(e => ({
       ...e,
-      deposit: convert(e.deposit, storedCurrency, displayCurrency),
-      profit:  convert(e.profit,  storedCurrency, displayCurrency),
+      deposit: convert(e.deposit, '€', displayCurrency),
+      profit:  convert(e.profit,  '€', displayCurrency),
     }))
   }, [entries, storedCurrency, displayCurrency, convert])
 
   const convertedExpenses = useMemo(() => {
-    if (displayCurrency === storedCurrency || !convert) return expenses
+    if (displayCurrency === '€' || !convert) return expenses
     return expenses.map(e => ({
       ...e,
-      amount: convert(e.amount, storedCurrency, displayCurrency),
+      amount: convert(e.amount, '€', displayCurrency),
     }))
   }, [expenses, storedCurrency, displayCurrency, convert])
 

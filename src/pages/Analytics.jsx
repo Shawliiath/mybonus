@@ -1,6 +1,7 @@
 import { useState, useMemo, useRef } from 'react'
 import { useAuth } from '../context/AuthContext'
 import { useEntries } from '../hooks/useEntries'
+import { useCurrencyRates } from '../hooks/useCurrency'
 import { useExpenses } from '../hooks/useExpenses'
 import { addEntry } from '../firebase/firestore'
 import { computeStats, fmt } from '../utils/stats'
@@ -301,7 +302,8 @@ function CSVImport({ userId, onDone }) {
 
 export default function Analytics() {
   const { user, userData } = useAuth()
-  const currency   = userData?.preferences?.currency || '€'
+  const storedCurrency = userData?.preferences?.currency || '€'
+  const currency   = storedCurrency
   const baseAmount = userData?.bankroll?.amount || 0
   const [year, setYear] = useState('alltime')
   const YEARS = Array.from({ length: 4 }, (_, i) => CURRENT_YEAR - i)
@@ -310,11 +312,28 @@ export default function Analytics() {
   const { expenses, loading: loadX }          = useExpenses({})
   const loading = loadE || loadX
 
+  // Conversion devise
+  const { convert } = useCurrencyRates('€')
+
+  const convertedEntries = useMemo(() => {
+    if (currency === '€' || !convert) return entries
+    return entries.map(e => ({
+      ...e,
+      deposit: convert(e.deposit, '€', currency),
+      profit:  convert(e.profit,  '€', currency),
+    }))
+  }, [entries, currency, convert])
+
+  const convertedBaseAmount = useMemo(() => {
+    if (currency === '€' || !convert) return baseAmount
+    return convert(baseAmount, '€', currency) || baseAmount
+  }, [baseAmount, currency, convert])
+
   const yearEntries = useMemo(() => {
-    const confirmed = entries.filter(e => e.status !== 'pending')
+    const confirmed = convertedEntries.filter(e => e.status !== 'pending')
     if (year === 'alltime') return confirmed
     return confirmed.filter(e => e.weekStart && getYear(new Date(e.weekStart)) === year)
-  }, [entries, year])
+  }, [convertedEntries, year])
 
   const stats = useMemo(() => computeStats(yearEntries, []), [yearEntries])
 
@@ -383,7 +402,7 @@ export default function Analytics() {
           </h2>
           {loading
             ? <div className="h-48 bg-surface-muted rounded-xl animate-pulse" />
-            : <BankrollChart entries={entries.filter(e => e.status !== 'pending')} baseAmount={baseAmount} currency={currency} />
+            : <BankrollChart entries={entries.filter(e => e.status !== 'pending')} baseAmount={convertedBaseAmount} currency={currency} />
           }
         </div>
 

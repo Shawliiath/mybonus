@@ -66,34 +66,34 @@ export default function Dashboard() {
   const { expenses, loading: loadingExpenses, add: addExpense, update: updateExpense, remove: removeExpense } = useExpenses(filtersArg)
   const loading = loadingEntries || loadingExpenses
 
-  const { convert, error: ratesError } = useCurrencyRates(storedCurrency)
+  const { convert, error: ratesError } = useCurrencyRates('€')
 
   const convertedEntries = useMemo(() => {
-    if (displayCurrency === storedCurrency || !convert) return entries
+    if (displayCurrency === '€' || !convert) return entries
     return entries.map(e => ({
       ...e,
-      deposit: convert(e.deposit, storedCurrency, displayCurrency),
-      profit:  convert(e.profit,  storedCurrency, displayCurrency),
+      deposit: convert(e.deposit, '€', displayCurrency),
+      profit:  convert(e.profit,  '€', displayCurrency),
     }))
   }, [entries, storedCurrency, displayCurrency, convert])
 
   const convertedExpenses = useMemo(() => {
-    if (displayCurrency === storedCurrency || !convert) return expenses
+    if (displayCurrency === '€' || !convert) return expenses
     return expenses.map(e => ({
       ...e,
-      amount: convert(e.amount, storedCurrency, displayCurrency),
+      amount: convert(e.amount, '€', displayCurrency),
     }))
   }, [expenses, storedCurrency, displayCurrency, convert])
 
   const convertedBankroll = useMemo(() => {
-    if (displayCurrency === storedCurrency || !convert) return bankrollData.amount
-    return convert(bankrollData.amount, storedCurrency, displayCurrency)
+    if (displayCurrency === '€' || !convert) return bankrollData.amount
+    return convert(bankrollData.amount, '€', displayCurrency)
   }, [bankrollData.amount, storedCurrency, displayCurrency, convert])
 
   const convertedGoal = useMemo(() => {
     if (!monthlyGoal) return 0
-    if (displayCurrency === storedCurrency || !convert) return monthlyGoal
-    return convert(monthlyGoal, storedCurrency, displayCurrency)
+    if (displayCurrency === '€' || !convert) return monthlyGoal
+    return convert(monthlyGoal, '€', displayCurrency)
   }, [monthlyGoal, storedCurrency, displayCurrency, convert])
 
   const stats     = useMemo(() => computeStats(convertedEntries, convertedExpenses), [convertedEntries, convertedExpenses])
