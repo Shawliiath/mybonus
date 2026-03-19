@@ -75,7 +75,7 @@ VITE_FIREBASE_PROJECT_ID=
 VITE_FIREBASE_STORAGE_BUCKET=
 VITE_FIREBASE_MESSAGING_SENDER_ID=
 VITE_FIREBASE_APP_ID=
-VITE_COINGECKO_KEY=        # optionnel mais recommandé — free tier sur coingecko.com
+VITE_COINGECKO_KEY=        # optionnel mais très recommandé sinon api très limité — free tier sur coingecko.com
 VITE_HELIUS_API_KEY=       # optionnel — free tier sur helius.dev (Solana)
 ```
 
